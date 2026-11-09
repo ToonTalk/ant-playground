@@ -4,7 +4,7 @@
 
 A top-down ant colony built from AI-drawn sprite sheets. Ants wander, find crumbs, carry them home and lay scent trails that the others follow. A spider can be let in to hunt them. You are the Anteater, and you can chat with **Aunt Hillary**, the colony as a whole, who answers as a superorganism.
 
-Aunt Hillary comes from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's *Gödel, Escher, Bach* (1979). In the book, no single ant understands anything, but the colony as a whole can think and talk. Here she is played by an AI. With each question it is sent a plain-words summary of what the colony is doing right now, and you can read that summary under "What she can feel right now".
+Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's *Gödel, Escher, Bach* (1979). In the book, no single ant understands anything, but the colony as a whole can think and talk. Real colonies don't talk or think in words. Scientists do call a colony a *superorganism*, because many ants following simple rules work together like one living thing with no ant in charge. Aunt Hillary imagines what that whole might say if it had a point of view. Here she is played by an AI, which is told to say plainly that she's make-believe if anyone asks. With each question it is sent a plain-words summary of what the colony is doing right now, and you can read that summary under "What she can feel right now".
 
 ## What you can do
 

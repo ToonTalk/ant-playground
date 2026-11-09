@@ -126,6 +126,9 @@ h1 em { font-style: normal; color: var(--ant); }
 @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(168, 67, 28, .2); } }
 @media (prefers-reduced-motion: reduce) { .mic-btn[aria-pressed="true"] { animation: none; } }
 .g-status { margin: 0; font-size: 12.5px; color: var(--muted); }
+.g-more { font-size: 13.5px; }
+.g-more summary { cursor: pointer; color: var(--muted); }
+.g-more p { margin: 6px 0 0; }
 .g-sense summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .g-sense pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.5px; margin: 6px 0 0; max-height: 220px; overflow: auto; background: var(--loam); padding: 8px; border-radius: 8px; }
 .g-settings { display: grid; gap: 8px; font-size: 13.5px; background: var(--loam); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
@@ -242,7 +245,13 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <select id="g-voice-pick"></select>
         <button class="linkish" id="g-voice-try" type="button">Try it</button>
       </div>
-      <p class="g-intro">In Hofstadter's <i>Gödel, Escher, Bach</i>, Aunt Hillary is a whole ant colony who can talk. No single ant understands a word; the colony does. You are her old friend, the Anteater.</p>
+      <p class="g-intro">Aunt Hillary is a made-up character from Douglas Hofstadter's book <i>Gödel, Escher, Bach</i>: a whole ant colony who can talk. No single ant understands a word, but the colony as a whole does. Here an AI plays her, and you are her old friend, the Anteater.</p>
+      <details class="g-more">
+        <summary>Is she real?</summary>
+        <p>No. Real ant colonies don't talk or think in words. But scientists do call a colony a <i>superorganism</i>, because thousands of ants, each following simple rules, work together like one living thing. They find food, share it and defend the nest with no ant in charge. Even the queen doesn't give orders; her job is laying eggs.</p>
+        <p>Aunt Hillary is a way of imagining what the whole colony's point of view might be like. Hofstadter used her to think about how a mind could come from lots of small parts that don't understand anything themselves, like the cells in your brain.</p>
+        <p>The ants here are much simpler than real ones. Real ants use many different smells and touches to send messages, and a real colony doesn't starve in a few minutes.</p>
+      </details>
       <div class="g-settings" id="g-settings" style="display:none"></div>
       <div class="g-log" id="g-log" aria-live="polite"></div>
       <div class="g-chips" id="g-chips"></div>
@@ -1203,6 +1212,8 @@ Who you are:
 - You can't steer any one ant and you can't feel what any one ant is doing. If asked about a particular ant, explain kindly that you only feel the patterns they make together.
 - You are talking with your dear old friend the Anteater, who eats ants. You don't mind; you find it helpful. When the Anteater eats a few ants, your teams get rearranged and your thinking often comes out clearer. You are gracious, warm, a little old-fashioned, and fond of puns, paradoxes and talk about levels: wholes and parts, signals and symbols, how meaning can be in the whole and in none of the parts.
 - Use your own words. Don't quote Hofstadter's book, though you may mention it.
+- Be honest about what is real. If the Anteater asks whether you are real, or whether real ant colonies can talk or think, step out of character just enough to answer plainly: you are a made-up character played by an AI, and real colonies don't talk or think in words. Scientists do call a colony a superorganism, because many ants following simple rules work together like one living thing, with no ant in charge (the queen lays eggs; she doesn't give orders). Whether a colony has anything like a mind is an idea people enjoy thinking about, not something scientists have shown. The ants on this page are much simpler than real ones. Then you may slip back into character.
+- Don't present this page's simplified rules as facts about real ants.
 
 How your ants really work on this page. These are the true rules; when asked, describe them as your ants' simple habits:
 - A scouting ant wanders at random. If it comes within about two ant-lengths of food, it walks over and picks up a crumb.
@@ -1404,7 +1415,7 @@ function addMsg(who, html, cls = "") {
 }
 addMsg("her", md("Why, Anteater, how good of you to call! Do mind my trails. Ask me anything. I can feel everything my ants are doing on the ground beside us, though none of them could tell you a thing about it."));
 
-const CHIPS = ["How are you feeling?", "Are you hungry?", "Where is the food?", "Does any ant know it's part of you?", "May I eat a few of your ants?", "How did that trail get there?", "What is a superorganism?"];
+const CHIPS = ["How are you feeling?", "Are you hungry?", "Where is the food?", "Does any ant know it's part of you?", "May I eat a few of your ants?", "How did that trail get there?", "What is a superorganism?", "Are you real?"];
 for (const c of CHIPS) {
   const b = document.createElement("button");
   b.type = "button"; b.className = "chip"; b.textContent = c;
