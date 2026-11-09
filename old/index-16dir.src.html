@@ -1,0 +1,863 @@
+<title>Ant Sprite Playground</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one living scene up top (the colony), a field-notebook strip of controls under it;
+   the lab view is a two-column bench — specimen preview + compass on the left, the whole sheet on the right. */
+:root {
+  --loam: #ebe2d1;      /* page ground: dry sand */
+  --burrow: #f6f0e4;    /* panels */
+  --line: #d3c5ad;
+  --fg: #2a2119;
+  --muted: #6f604c;
+  --ant: #a8431c;       /* formica rust */
+  --amber: #b07a12;     /* pheromone */
+  --ok: #4f7a35;
+  --warn: #a8700a;
+  --bad: #b8361f;
+  --chip-bg: #e4d8c3;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --loam: #1a1511; --burrow: #241d17; --line: #3b3128; --fg: #efe4d2; --muted: #a8977f;
+    --ant: #e0703c; --amber: #e8b04c; --ok: #9cc777; --warn: #e8b04c; --bad: #f0735a; --chip-bg: #2f261e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --loam: #1a1511; --burrow: #241d17; --line: #3b3128; --fg: #efe4d2; --muted: #a8977f;
+  --ant: #e0703c; --amber: #e8b04c; --ok: #9cc777; --warn: #e8b04c; --bad: #f0735a; --chip-bg: #2f261e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--loam); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 4.2vw, 44px); line-height: 1; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ant); }
+.sub { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.tabs { display: flex; gap: 4px; background: var(--burrow); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.tabs a { font-family: var(--display); font-weight: 700; text-decoration: none; color: var(--muted); padding: 7px 16px; border-radius: 999px; font-size: 15px; }
+.tabs a[aria-current="page"] { background: var(--fg); color: var(--loam); }
+.tabs a:focus-visible, button:focus-visible, input:focus-visible, svg:focus-visible, .row:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+
+/* colony */
+.stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #8a6a43; }
+#world { display: block; width: 100%; height: clamp(360px, 66vh, 720px); cursor: crosshair; touch-action: manipulation; }
+#world.lead { touch-action: none; cursor: grab; }
+.hud { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.pill { font-family: var(--mono); font-size: 12px; background: rgba(26, 21, 17, .72); color: #f3e7d3; padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(4px); }
+.pill b { color: #f0b85a; font-weight: 600; }
+.toolbar { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 4px; background: rgba(26, 21, 17, .78); padding: 5px; border-radius: 12px; backdrop-filter: blur(6px); max-width: calc(100% - 24px); }
+.toolbar button { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 1px; padding: 6px 12px; border-radius: 8px; color: #d9c9b0; font-family: var(--body); font-size: 12px; }
+.toolbar button svg { width: 22px; height: 22px; }
+.toolbar button[aria-pressed="true"] { background: #f3e7d3; color: #1a1511; }
+.toolbar button:focus-visible { outline: 2px solid #f0b85a; }
+
+.notebook { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 28px; background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label, .lbl { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.field output { font-variant-numeric: tabular-nums; color: var(--fg); }
+input[type="range"] { width: 100%; accent-color: var(--ant); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; width: fit-content; max-width: 100%; }
+.seg button { all: unset; cursor: pointer; padding: 6px 12px; font-size: 13px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ant); color: #fff8ee; }
+.seg button:focus-visible { outline: 2px solid var(--ant); outline-offset: -2px; }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }
+.checks input { accent-color: var(--ant); width: 16px; height: 16px; }
+.btn { all: unset; cursor: pointer; font-family: var(--display); font-weight: 700; padding: 7px 14px; border-radius: 9px; background: var(--fg); color: var(--loam); font-size: 14px; text-align: center; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.btn:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* lab */
+.lab { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .lab { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.panel h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+#specimen { width: 100%; aspect-ratio: 4 / 3; max-width: 100%; border-radius: 10px; display: block; background: #8a6a43; }
+.compass-row { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 14px; align-items: center; }
+@media (max-width: 420px) { .compass-row { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+#dial { width: 180px; height: 180px; touch-action: none; cursor: grab; display: block; }
+#dial .rim { fill: var(--loam); stroke: var(--line); stroke-width: 1.5; }
+#dial .tick { stroke: var(--muted); stroke-width: 1.2; }
+#dial .tick.major { stroke: var(--fg); stroke-width: 2; }
+#dial text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+#dial .measured { fill: var(--ant); }
+#dial .gap { fill: none; stroke: var(--bad); stroke-width: 5; stroke-opacity: .35; stroke-linecap: round; }
+#dial .needle { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; }
+#dial .hub { fill: var(--fg); }
+.readout { font-size: 14px; display: grid; gap: 6px; min-width: 0; }
+.readout .big { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; }
+.readout p { margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--ant); margin-right: 5px; vertical-align: -1px; }
+.legend i.g { border-radius: 2px; background: var(--bad); opacity: .45; width: 14px; height: 5px; vertical-align: 1px; }
+.strip { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+.thumb { flex: none; border-radius: 6px; background-color: var(--chip-bg); background-repeat: no-repeat; }
+.strip .thumb.on { outline: 2px solid var(--ant); outline-offset: -2px; }
+.controls-inline { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.controls-inline .field { flex: 1 1 160px; }
+
+.sheet { display: grid; gap: 2px; min-width: 0; }
+.sheet-scroll { overflow-x: auto; }
+.sheet-head, .row { display: grid; grid-template-columns: 74px 92px 112px repeat(8, 58px); gap: 4px; align-items: center; min-width: 640px; }
+.sheet-head { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 0 6px 4px; }
+.row { padding: 3px 6px; border-radius: 8px; cursor: pointer; }
+.row:hover { background: var(--chip-bg); }
+.row.on { background: var(--chip-bg); box-shadow: inset 3px 0 0 var(--ant); }
+.deg { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 6px; }
+.deg svg { width: 16px; height: 16px; flex: none; }
+.deg svg path { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chip { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; width: fit-content; }
+.chip.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.chip.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.chip.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+.findings { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; max-width: 70ch; }
+.findings b { color: var(--ant); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Ant Sprite <em>Playground</em></h1>
+      <p class="sub" id="sub">Sixteen directions, eight walking frames, one ant. Drop crumbs and watch the colony lay down a trail.</p>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#colony" id="tab-colony" aria-current="page">Colony</a>
+      <a href="#lab" id="tab-lab">Sprite lab</a>
+    </nav>
+  </header>
+
+  <!-- COLONY -->
+  <section id="view-colony" class="wrap" style="gap:12px">
+    <div class="stage">
+      <canvas id="world" aria-label="Ant colony. Click to drop crumbs; ants carry them to the nest."></canvas>
+      <div class="hud">
+        <span class="pill">ants <b id="hud-ants">40</b></span>
+        <span class="pill">crumbs home <b id="hud-home">0</b></span>
+        <span class="pill" id="hud-fps">— fps</span>
+      </div>
+      <div class="toolbar" role="group" aria-label="Tool">
+        <button id="tool-crumb" aria-pressed="true" title="Click the ground to drop a crumb">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 14c-1-4 2-8 6-8 3 0 4 2 6 2 2 1 3 3 2 6-1 4-5 5-8 5s-5-2-6-5z" fill="#d9a85b" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="11" r="1" fill="currentColor"/><circle cx="14" cy="14" r="1" fill="currentColor"/></svg>Crumb</button>
+        <button id="tool-lead" aria-pressed="false" title="Hold and drag: nearby ants follow">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/></svg>Lead</button>
+        <button id="tool-scare" aria-pressed="false" title="Click to scatter ants">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>Scatter</button>
+      </div>
+    </div>
+
+    <div class="notebook">
+      <div class="field">
+        <label for="n-ants">Ants <output id="o-ants">40</output></label>
+        <input id="n-ants" type="range" min="1" max="160" value="40">
+      </div>
+      <div class="field">
+        <label for="n-speed">Walking speed <output id="o-speed">1.0×</output></label>
+        <input id="n-speed" type="range" min="0.25" max="2.5" step="0.05" value="1">
+      </div>
+      <div class="field">
+        <label for="n-size">Ant size <output id="o-size">0.75×</output></label>
+        <input id="n-size" type="range" min="0.4" max="1.6" step="0.05" value="0.75">
+      </div>
+      <div class="field">
+        <span class="lbl">Which frame faces where</span>
+        <div class="seg" role="group" aria-label="Facing">
+          <button class="facing" data-mode="measured" aria-pressed="true">Measured</button>
+          <button class="facing" data-mode="labels" aria-pressed="false">Sheet labels</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Show</span>
+        <div class="checks">
+          <label><input type="checkbox" id="c-trails" checked> Trails</label>
+          <label><input type="checkbox" id="c-debug"> Headings</label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Scene</span>
+        <div class="checks">
+          <button class="btn" id="b-pause">Pause</button>
+          <button class="btn ghost" id="b-clear">New ground</button>
+        </div>
+      </div>
+      <p class="hint" style="grid-column: 1 / -1">“Sheet labels” uses each row exactly as the sheet names it, so you can see the ants that walk backward or sideways. “Measured” picks the frame that actually points the right way and turns it the last few degrees.</p>
+    </div>
+  </section>
+
+  <!-- LAB -->
+  <section id="view-lab" class="lab" hidden>
+    <div class="panel">
+      <h2>Specimen</h2>
+      <canvas id="specimen" aria-label="One ant walking in the chosen direction"></canvas>
+      <div class="compass-row">
+        <svg id="dial" viewBox="-100 -100 200 200" tabindex="0" role="slider" aria-label="Heading in degrees" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"></svg>
+        <div class="readout">
+          <span class="lbl">Heading</span>
+          <span class="big" id="r-deg">0°</span>
+          <p id="r-how"></p>
+        </div>
+      </div>
+      <div class="legend"><span><i></i>where a row really faces</span><span><i class="g"></i>no drawing faces this way</span></div>
+      <div class="seg" role="group" aria-label="Facing">
+        <button class="facing" data-mode="measured" aria-pressed="true">Measured</button>
+        <button class="facing" data-mode="labels" aria-pressed="false">Sheet labels</button>
+      </div>
+      <div class="controls-inline">
+        <div class="field">
+          <label for="n-fps">Frame rate <output id="o-fps">10 fps</output></label>
+          <input id="n-fps" type="range" min="1" max="24" value="10">
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="c-spin" checked> Spin</label>
+          <label><input type="checkbox" id="c-snap"> Snap to rows</label>
+          <label><input type="checkbox" id="c-play" checked> Walk</label>
+        </div>
+      </div>
+      <div>
+        <span class="lbl" id="strip-lbl">Frames in this row</span>
+        <div class="strip" id="strip"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>The sheet, row by row</h2>
+      <ul class="findings">
+        <li>Most rows are close to their label, but <b>three rows face the wrong way</b>: 247.5° points up and to the right, 270° points straight up, and 315° points up and to the left.</li>
+        <li>Nothing on the sheet faces between about 205° and 330°, the whole lower arc. Measured mode fills it by turning the top-down ant from the 90° row.</li>
+        <li>The eight frames in a row differ only a little, so the walk reads as a shuffle. Stepping frames by distance walked keeps the feet from sliding.</li>
+      </ul>
+      <div class="sheet-scroll">
+        <div class="sheet" id="sheet">
+          <div class="sheet-head"><span>Label</span><span>Faces</span><span>Verdict</span><span style="grid-column: span 8">Frames 1–8 (cut out, centered)</span></div>
+        </div>
+      </div>
+      <p class="hint">Click a row to point the specimen that way. “Faces” is measured from each drawing: the line from the dark abdomen to the rust-red head and thorax, averaged over the row’s eight frames.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const ATLAS_URI = "%%ATLAS%%";
+const TW = 112, TH = 64;
+// Median measured heading (degrees, 0 = right, 90 = up) of each sheet row, from tools/extract.py
+const ROW_H = [13.3, 26.4, 42.0, 47.4, 90.5, 125.2, 131.4, 143.8, 169.8, 195.1, 205.4, 49.3, 95.6, 330.3, 138.9, 3.3];
+const LABEL = ROW_H.map((_, i) => i * 22.5);
+const TOPDOWN = new Set([4, 12]);   // seen from straight above: safe to turn any amount
+const HEAD_PX = 19;                  // body center to mouthparts, at 1x
+
+const norm = d => ((d % 360) + 360) % 360;
+const diff = (a, b) => ((a - b) % 360 + 540) % 360 - 180;   // a - b in (-180, 180]
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- choosing a frame for a heading ----------
+const PICK = (() => {
+  const cands = [];
+  ROW_H.forEach((h, r) => {
+    cands.push({ r, h, flip: false });
+    cands.push({ r, h: norm(180 - h), flip: true });  // mirror left-right: legs stay underneath
+  });
+  const table = [];
+  for (let deg = 0; deg < 360; deg++) {
+    let best = null, bestCost = Infinity;
+    for (const c of cands) {
+      const d = Math.abs(diff(deg, c.h));
+      let cost = TOPDOWN.has(c.r) ? 20 + 0.12 * d : d;
+      if (c.flip) cost += 8;   // mirroring flips the lighting, so prefer the drawn frame
+      if (cost < bestCost) { bestCost = cost; best = c; }
+    }
+    table.push({ r: best.r, flip: best.flip, rot: diff(deg, best.h), h: best.h });
+  }
+  return table;
+})();
+let facing = "measured";
+function choose(deg) {
+  deg = norm(deg);
+  if (facing === "labels") return { r: Math.round(deg / 22.5) % 16, flip: false, rot: 0 };
+  return PICK[Math.round(deg) % 360];
+}
+function drawAnt(ctx, img, x, y, deg, frame, scale, alpha = 1) {
+  const p = choose(deg);
+  ctx.save();
+  ctx.translate(x, y);
+  if (p.rot) ctx.rotate(-p.rot * Math.PI / 180);
+  if (p.flip) ctx.scale(-1, 1);
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  ctx.drawImage(img, (frame % 8) * TW, p.r * TH, TW, TH, -TW * scale / 2, -TH * scale / 2, TW * scale, TH * scale);
+  ctx.restore();
+  return p;
+}
+
+// ---------- seeded random + procedural ground ----------
+function rng(seed) {
+  let s = seed >>> 0 || 1;
+  return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+function makeGround(w, h, seed, wrap) {
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+  const g = c.getContext("2d"), R = rng(seed);
+  if (wrap) g.fillStyle = "#91714a";   // a repeating tile needs a flat base
+  else {
+    const grad = g.createLinearGradient(0, 0, w * 0.4, h);
+    grad.addColorStop(0, "#9c7a4e"); grad.addColorStop(1, "#86663f");
+    g.fillStyle = grad;
+  }
+  g.fillRect(0, 0, w, h);
+  const each = (x, y, fn) => {
+    if (!wrap) return fn(x, y);
+    for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) fn(x + dx, y + dy);
+  };
+  // damp patches
+  for (let i = 0; i < (w * h) / 9000; i++) {
+    const x = R() * w, y = R() * h, r = 30 + R() * 90, dark = R() < 0.55;
+    each(x, y, (X, Y) => {
+      const rg = g.createRadialGradient(X, Y, 0, X, Y, r);
+      rg.addColorStop(0, dark ? "rgba(70,48,26,0.22)" : "rgba(190,160,110,0.18)");
+      rg.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = rg; g.fillRect(X - r, Y - r, r * 2, r * 2);
+    });
+  }
+  // grains
+  const grains = ["#6b4f2f", "#b4935f", "#c9ac78", "#5a4128", "#a3845a", "#d8c49a"];
+  for (let i = 0; i < (w * h) / 22; i++) {
+    const x = R() * w, y = R() * h, s = R() < 0.92 ? 0.6 + R() * 0.9 : 1.6 + R() * 1.4;
+    g.fillStyle = grains[(R() * grains.length) | 0];
+    g.globalAlpha = 0.35 + R() * 0.5;
+    each(x, y, (X, Y) => g.fillRect(X, Y, s, s));
+  }
+  g.globalAlpha = 1;
+  // pebbles
+  for (let i = 0; i < (w * h) / 5200; i++) {
+    const x = R() * w, y = R() * h, rx = 2 + R() * 6, ry = rx * (0.55 + R() * 0.4), a = R() * Math.PI;
+    const tone = 120 + R() * 90 | 0;
+    each(x, y, (X, Y) => {
+      g.save(); g.translate(X, Y); g.rotate(a);
+      g.fillStyle = "rgba(40,28,15,0.35)"; g.beginPath(); g.ellipse(1.2, 1.4, rx, ry, 0, 0, 7); g.fill();
+      g.fillStyle = `rgb(${tone},${tone * 0.86 | 0},${tone * 0.7 | 0})`; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, 7); g.fill();
+      g.fillStyle = "rgba(255,245,225,0.35)"; g.beginPath(); g.ellipse(-rx * 0.3, -ry * 0.35, rx * 0.45, ry * 0.35, 0, 0, 7); g.fill();
+      g.restore();
+    });
+  }
+  // dry grass + twigs
+  if (!wrap) {
+    for (let i = 0; i < (w * h) / 60000; i++) {
+      const x = R() * w, y = R() * h, len = 30 + R() * 70, a = R() * Math.PI * 2, bend = (R() - 0.5) * 30;
+      g.strokeStyle = R() < 0.5 ? "rgba(214,190,128,0.75)" : "rgba(92,62,32,0.7)";
+      g.lineWidth = 1.2 + R() * 1.8; g.lineCap = "round";
+      g.beginPath(); g.moveTo(x, y);
+      g.quadraticCurveTo(x + Math.cos(a) * len / 2 + bend, y + Math.sin(a) * len / 2 - bend, x + Math.cos(a) * len, y + Math.sin(a) * len);
+      g.stroke();
+    }
+  }
+  return c;
+}
+
+// ---------- image ----------
+const atlas = new Image();
+atlas.src = ATLAS_URI;
+
+// ---------- COLONY ----------
+const world = document.getElementById("world");
+const wctx = world.getContext("2d");
+let W = 0, H = 0, DPR = 1, ground = null, groundSeed = 7;
+let nest = { fx: 0.24, fy: 0.62 };
+let crumbs = [];
+let ants = [];
+let delivered = 0;
+let paused = reduceMotion;
+let tool = "crumb";
+let pointer = { x: 0, y: 0, down: false };
+let showTrails = true, showDebug = false;
+let speedMul = 1, sizeMul = 0.75;
+const GRID = 6;
+let gw = 0, gh = 0, trail = new Float32Array(0);
+const trailCanvas = document.createElement("canvas");
+const tctx = trailCanvas.getContext("2d");
+let trailImg = null;
+const R = rng(1234);
+
+function nestXY() { return { x: nest.fx * W, y: nest.fy * H }; }
+
+function resize() {
+  const r = world.getBoundingClientRect();
+  const nw = Math.round(r.width), nh = Math.round(r.height);
+  if (!nw || !nh || (nw === W && nh === H)) return;
+  const sx = W ? nw / W : 1, sy = H ? nh / H : 1;
+  for (const a of ants) { a.x *= sx; a.y *= sy; }
+  for (const c of crumbs) { c.x *= sx; c.y *= sy; }
+  W = nw; H = nh; DPR = Math.min(2, window.devicePixelRatio || 1);
+  world.width = Math.round(W * DPR); world.height = Math.round(H * DPR);
+  ground = makeGround(W, H, groundSeed, false);
+  drawNestOnGround();
+  gw = Math.ceil(W / GRID); gh = Math.ceil(H / GRID);
+  trail = new Float32Array(gw * gh);
+  trailCanvas.width = gw; trailCanvas.height = gh;
+  trailImg = tctx.createImageData(gw, gh);
+}
+
+function drawNestOnGround() {
+  const g = ground.getContext("2d"), { x, y } = nestXY(), Rn = rng(groundSeed * 31 + 5);
+  // mound of excavated sand
+  for (let i = 0; i < 900; i++) {
+    const a = Rn() * Math.PI * 2, d = 14 + Math.pow(Rn(), 0.7) * 42;
+    const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.8;
+    g.fillStyle = ["#c7a46d", "#b8935c", "#d6b880", "#a88552"][(Rn() * 4) | 0];
+    g.globalAlpha = 0.55 + Rn() * 0.45;
+    const s = 1 + Rn() * 2.4;
+    g.fillRect(px, py, s, s);
+  }
+  g.globalAlpha = 1;
+  const rg = g.createRadialGradient(x, y, 2, x, y, 16);
+  rg.addColorStop(0, "#120b05"); rg.addColorStop(0.6, "#2b1a0c"); rg.addColorStop(1, "rgba(60,40,20,0)");
+  g.fillStyle = rg; g.beginPath(); g.ellipse(x, y, 17, 13, 0, 0, 7); g.fill();
+}
+
+function makeAnt(nearNest = true) {
+  const n = nestXY();
+  const a = R() * 360;
+  return {
+    x: nearNest ? n.x + Math.cos(a) * 10 : R() * W,
+    y: nearNest ? n.y + Math.sin(a) * 8 : R() * H,
+    dir: a, turn: 0, walked: R() * 40, pace: 0.85 + R() * 0.3,
+    carrying: false, flee: 0, fx: 0, fy: 0, id: ants.length
+  };
+}
+function setAntCount(n) {
+  while (ants.length < n) ants.push(makeAnt(true));
+  ants.length = n;
+  document.getElementById("hud-ants").textContent = n;
+}
+function addCrumb(x, y, amount = 45) {
+  const Rc = rng((x * 73856093) ^ (y * 19349663));
+  const pts = [];
+  for (let i = 0; i < 9; i++) pts.push(0.7 + Rc() * 0.45);
+  crumbs.push({ x, y, amount, max: amount, pts, rot: Rc() * 6.28 });
+}
+
+function trailAt(x, y) {
+  const i = (x / GRID) | 0, j = (y / GRID) | 0;
+  if (i < 0 || j < 0 || i >= gw || j >= gh) return 0;
+  return trail[j * gw + i];
+}
+function turnToward(a, target, maxStep) {
+  const d = diff(target, a.dir);
+  a.dir = norm(a.dir + Math.max(-maxStep, Math.min(maxStep, d)));
+}
+const angTo = (ax, ay, bx, by) => norm(Math.atan2(-(by - ay), bx - ax) * 180 / Math.PI);
+
+function step(dt) {
+  const n = nestXY();
+  const decay = Math.pow(0.94, dt);
+  for (let i = 0; i < trail.length; i++) trail[i] *= decay;
+  const baseSpeed = 34 * speedMul * (0.6 + sizeMul * 0.55);
+  const maxTurn = 260 * dt;
+
+  for (const a of ants) {
+    // gentle wander underneath everything else
+    a.turn += (R() - 0.5) * 900 * dt;
+    a.turn *= Math.pow(0.04, dt);
+    a.turn = Math.max(-120, Math.min(120, a.turn));
+    let target = null, urgency = 1;
+
+    if (a.flee > 0) {
+      a.flee -= dt;
+      target = angTo(a.fx, a.fy, a.x, a.y); urgency = 1.8;
+    } else if (tool === "lead" && pointer.down && Math.hypot(pointer.x - a.x, pointer.y - a.y) < 280) {
+      if (Math.hypot(pointer.x - a.x, pointer.y - a.y) > 16) target = angTo(a.x, a.y, pointer.x, pointer.y);
+      urgency = 1.4;
+    } else if (a.carrying) {
+      target = angTo(a.x, a.y, n.x, n.y);
+      if (Math.hypot(n.x - a.x, n.y - a.y) < 14) {
+        a.carrying = false; delivered++; a.dir = norm(a.dir + 180 + (R() - 0.5) * 60);
+        document.getElementById("hud-home").textContent = delivered;
+        target = null;
+      }
+    } else {
+      // smell food nearby
+      let best = null, bd = 80;
+      for (const c of crumbs) { const d = Math.hypot(c.x - a.x, c.y - a.y); if (d < bd) { bd = d; best = c; } }
+      if (best) {
+        target = angTo(a.x, a.y, best.x, best.y);
+        if (bd < 7 && best.amount > 0) {
+          best.amount--; a.carrying = true; a.dir = norm(a.dir + 180); target = null;
+        }
+      } else {
+        // follow trail, preferring the end that leads away from the nest
+        const look = 22, spread = 32;
+        let bestV = 0.06, bestA = null;
+        for (const off of [-spread, 0, spread]) {
+          const ang = (a.dir + off) * Math.PI / 180;
+          const sx = a.x + Math.cos(ang) * look, sy = a.y - Math.sin(ang) * look;
+          let v = trailAt(sx, sy);
+          if (Math.hypot(sx - n.x, sy - n.y) > Math.hypot(a.x - n.x, a.y - n.y)) v *= 1.35;
+          if (v > bestV) { bestV = v; bestA = a.dir + off; }
+        }
+        if (bestA !== null) { target = norm(bestA); urgency = 0.7; }
+      }
+    }
+
+    // keep inside the scene
+    const m = 24;
+    if (a.x < m || a.y < m || a.x > W - m || a.y > H - m) { target = angTo(a.x, a.y, W / 2, H / 2); urgency = 1.2; }
+
+    if (target !== null) {
+      turnToward(a, norm(target + a.turn * 0.15), maxTurn * urgency);
+    } else {
+      a.dir = norm(a.dir + a.turn * dt);
+    }
+
+    const sp = baseSpeed * a.pace * (a.flee > 0 ? 2.2 : 1) * (a.carrying ? 0.85 : 1);
+    const rad = a.dir * Math.PI / 180;
+    a.x += Math.cos(rad) * sp * dt;
+    a.y -= Math.sin(rad) * sp * dt;
+    a.walked += sp * dt;
+
+    if (a.carrying) {
+      const i = (a.x / GRID) | 0, j = (a.y / GRID) | 0;
+      if (i >= 0 && j >= 0 && i < gw && j < gh) trail[j * gw + i] = Math.min(4, trail[j * gw + i] + 3.2 * dt);
+    }
+  }
+  crumbs = crumbs.filter(c => c.amount > 0);
+}
+
+function drawCrumb(g, c) {
+  const r = 5 + 11 * Math.sqrt(c.amount / c.max);
+  g.save(); g.translate(c.x, c.y); g.rotate(c.rot);
+  g.fillStyle = "rgba(40,25,10,0.35)";
+  g.beginPath();
+  c.pts.forEach((k, i) => { const a = i / c.pts.length * 6.283; g.lineTo(Math.cos(a) * r * k + 1.5, Math.sin(a) * r * k + 2); });
+  g.fill();
+  g.fillStyle = "#e2b871";
+  g.beginPath();
+  c.pts.forEach((k, i) => { const a = i / c.pts.length * 6.283; g.lineTo(Math.cos(a) * r * k, Math.sin(a) * r * k); });
+  g.fill();
+  g.fillStyle = "#b9833f";
+  for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(Math.cos(i * 2.1) * r * 0.4, Math.sin(i * 2.1) * r * 0.4, 1.1, 0, 7); g.fill(); }
+  g.restore();
+}
+
+function render() {
+  const g = wctx;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.drawImage(ground, 0, 0, W, H);
+
+  if (showTrails) {
+    const d = trailImg.data;
+    for (let i = 0; i < trail.length; i++) {
+      const v = Math.min(1, trail[i] / 1.6);
+      d[i * 4] = 255; d[i * 4 + 1] = 196; d[i * 4 + 2] = 92; d[i * 4 + 3] = v * 120;
+    }
+    tctx.putImageData(trailImg, 0, 0);
+    g.drawImage(trailCanvas, 0, 0, gw * GRID, gh * GRID);
+  }
+  for (const c of crumbs) drawCrumb(g, c);
+
+  const s = sizeMul;
+  const stride = 3.4 * s;
+  // shadows first so ants never sit under a neighbor's shadow
+  g.fillStyle = "rgba(30,18,8,0.22)";
+  for (const a of ants) { g.beginPath(); g.ellipse(a.x + 2 * s, a.y + 4 * s, 15 * s, 7 * s, 0, 0, 7); g.fill(); }
+  for (const a of ants) {
+    const frame = Math.floor(a.walked / stride) % 8;
+    drawAnt(g, atlas, a.x, a.y, a.dir, frame, s);
+    if (a.carrying) {
+      const rad = a.dir * Math.PI / 180;
+      const hx = a.x + Math.cos(rad) * HEAD_PX * s, hy = a.y - Math.sin(rad) * HEAD_PX * s;
+      g.fillStyle = "#e9c27f"; g.strokeStyle = "rgba(60,35,10,0.6)"; g.lineWidth = 0.8;
+      g.beginPath(); g.arc(hx, hy, 3.6 * s + 0.6, 0, 7); g.fill(); g.stroke();
+    }
+  }
+  if (showDebug) {
+    g.font = "10px JetBrains Mono, monospace"; g.lineWidth = 1.5;
+    for (const a of ants) {
+      const rad = a.dir * Math.PI / 180, p = choose(a.dir);
+      g.strokeStyle = "#7dff9a";
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(a.x + Math.cos(rad) * 30 * s, a.y - Math.sin(rad) * 30 * s); g.stroke();
+      g.fillStyle = "rgba(10,10,10,0.75)";
+      const label = `${LABEL[p.r]}°${p.flip ? "⇋" : ""}${p.rot ? (p.rot > 0 ? "+" : "") + Math.round(p.rot) : ""}`;
+      g.fillRect(a.x + 10, a.y + 8, g.measureText(label).width + 6, 13);
+      g.fillStyle = "#f3e7d3"; g.fillText(label, a.x + 13, a.y + 18);
+    }
+  }
+  if (tool === "lead" && pointer.down) {
+    g.strokeStyle = "rgba(255,240,210,0.6)"; g.setLineDash([3, 5]); g.lineWidth = 1.5;
+    g.beginPath(); g.arc(pointer.x, pointer.y, 22, 0, 7); g.stroke(); g.setLineDash([]);
+  }
+}
+
+// ---------- LAB ----------
+const spec = document.getElementById("specimen");
+const sctx = spec.getContext("2d");
+const dial = document.getElementById("dial");
+let labDeg = 30, labFrame = 0, labSpin = !reduceMotion, labSnap = false, labPlay = true, labFps = 10;
+let labGround = null, labScroll = { x: 0, y: 0 }, frameAcc = 0;
+
+function buildDial() {
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (n, attrs) => { const e = document.createElementNS(NS, n); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+  dial.appendChild(el("circle", { class: "rim", r: 84 }));
+  // the lower arc nothing on the sheet faces (largest gap between measured headings)
+  const hs = [...ROW_H].sort((a, b) => a - b);
+  let gapStart = 0, gapLen = 0;
+  hs.forEach((h, i) => { const nx = i + 1 < hs.length ? hs[i + 1] : hs[0] + 360; if (nx - h > gapLen) { gapLen = nx - h; gapStart = h; } });
+  const arc = (a0, a1, r) => {
+    const p = a => [Math.cos(a * Math.PI / 180) * r, -Math.sin(a * Math.PI / 180) * r];
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    return `M${x0} ${y0} A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 0 ${x1} ${y1}`;
+  };
+  dial.appendChild(el("path", { class: "gap", d: arc(gapStart + 4, gapStart + gapLen - 4, 84) }));
+  for (let i = 0; i < 16; i++) {
+    const a = i * 22.5 * Math.PI / 180, major = i % 4 === 0;
+    const r0 = major ? 70 : 75;
+    dial.appendChild(el("line", { class: "tick" + (major ? " major" : ""), x1: Math.cos(a) * r0, y1: -Math.sin(a) * r0, x2: Math.cos(a) * 82, y2: -Math.sin(a) * 82 }));
+    if (major) {
+      const t = el("text", { x: Math.cos(a) * 57, y: -Math.sin(a) * 57 + 3.5, "text-anchor": "middle" });
+      t.textContent = i * 22.5 + "°"; dial.appendChild(t);
+    }
+  }
+  ROW_H.forEach(h => {
+    const a = h * Math.PI / 180;
+    dial.appendChild(el("circle", { class: "measured", cx: Math.cos(a) * 91, cy: -Math.sin(a) * 91, r: 3.6 }));
+  });
+  dial.appendChild(el("line", { class: "needle", id: "needle", x1: 0, y1: 0, x2: 66, y2: 0 }));
+  dial.appendChild(el("circle", { class: "hub", r: 4.5 }));
+}
+function setLabDeg(d, fromUser) {
+  labDeg = norm(d);
+  if (labSnap) labDeg = norm(Math.round(labDeg / 22.5) * 22.5);
+  if (fromUser && labSpin) { labSpin = false; document.getElementById("c-spin").checked = false; }
+  updateLabText();
+}
+function rowStatus(r) {
+  const off = Math.abs(diff(ROW_H[r], LABEL[r]));
+  if (off <= 15) return { cls: "ok", text: "on target" };
+  if (off <= 40) return { cls: "warn", text: `off ${Math.round(off)}°` };
+  return { cls: "bad", text: "wrong way" };
+}
+let lastLabKey = "";
+function updateLabText() {
+  const p = choose(labDeg);
+  const shown = Math.round(labDeg);
+  document.getElementById("r-deg").textContent = (labSnap || facing === "labels" ? +labDeg.toFixed(1) : shown) + "°";
+  dial.setAttribute("aria-valuenow", shown);
+  const a = labDeg * Math.PI / 180;
+  const nd = document.getElementById("needle");
+  nd.setAttribute("x2", Math.cos(a) * 66); nd.setAttribute("y2", -Math.sin(a) * 66);
+  let how;
+  if (facing === "labels") {
+    const off = diff(ROW_H[p.r], labDeg);
+    how = `Sheet row <b>${LABEL[p.r]}°</b>, which really faces ${Math.round(ROW_H[p.r])}°` +
+      (Math.abs(off) > 40 ? ` — <b style="color:var(--bad)">${Math.round(Math.abs(off))}° off</b>.` : ".");
+  } else {
+    const parts = [`Row <b>${LABEL[p.r]}°</b> (faces ${Math.round(ROW_H[p.r])}°)`];
+    if (p.flip) parts.push("mirrored");
+    if (Math.abs(p.rot) >= 0.5) parts.push(`turned ${p.rot > 0 ? "+" : "−"}${Math.abs(Math.round(p.rot))}°`);
+    how = parts.join(", ") + ".";
+    if (TOPDOWN.has(p.r) && Math.abs(p.rot) > 45) how += " It’s seen from straight above, so turning it looks natural.";
+  }
+  const key = p.r + "|" + facing;
+  document.getElementById("r-how").innerHTML = how;
+  if (key !== lastLabKey) {
+    lastLabKey = key;
+    document.querySelectorAll(".row").forEach(rw => rw.classList.toggle("on", +rw.dataset.r === p.r));
+    const strip = document.getElementById("strip");
+    strip.querySelectorAll(".thumb").forEach((t, f) => setThumb(t, p.r, f, 0.6));
+    document.getElementById("strip-lbl").textContent = `Frames in the ${LABEL[p.r]}° row`;
+  }
+  document.querySelectorAll("#strip .thumb").forEach((t, f) => t.classList.toggle("on", f === labFrame));
+}
+function setThumb(el, r, f, k) {
+  el.style.width = TW * k + "px"; el.style.height = TH * k + "px";
+  el.style.backgroundImage = `url(${ATLAS_URI})`;
+  el.style.backgroundSize = `${8 * TW * k}px ${16 * TH * k}px`;
+  el.style.backgroundPosition = `${-f * TW * k}px ${-r * TH * k}px`;
+}
+const arrowSvg = deg => `<svg viewBox="-8 -8 16 16" aria-hidden="true" style="transform:rotate(${-deg}deg)"><path d="M-6 0H6M2-4L6 0L2 4"/></svg>`;
+function buildSheet() {
+  const sheet = document.getElementById("sheet");
+  for (let r = 0; r < 16; r++) {
+    const st = rowStatus(r);
+    const row = document.createElement("div");
+    row.className = "row"; row.dataset.r = r; row.tabIndex = 0; row.setAttribute("role", "button");
+    row.setAttribute("aria-label", `Row labelled ${LABEL[r]} degrees, faces ${Math.round(ROW_H[r])} degrees, ${st.text}`);
+    row.innerHTML = `<span class="deg">${arrowSvg(LABEL[r])}${LABEL[r]}°</span>
+      <span class="deg" style="color:var(--${st.cls === "ok" ? "fg" : st.cls})">${arrowSvg(ROW_H[r])}${Math.round(ROW_H[r])}°</span>
+      <span class="chip ${st.cls}">${st.text}</span>`;
+    for (let f = 0; f < 8; f++) { const t = document.createElement("span"); t.className = "thumb"; setThumb(t, r, f, 0.5); row.appendChild(t); }
+    const go = () => { setLabDeg(LABEL[r], true); };
+    row.addEventListener("click", go);
+    row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); go(); } });
+    sheet.appendChild(row);
+  }
+  const strip = document.getElementById("strip");
+  for (let f = 0; f < 8; f++) { const t = document.createElement("span"); t.className = "thumb"; strip.appendChild(t); }
+}
+function sizeSpecimen() {
+  const r = spec.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  spec.width = Math.round(r.width * dpr); spec.height = Math.round(r.height * dpr);
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!labGround) labGround = makeGround(256, 256, 99, true);
+}
+function renderLab(dt) {
+  const r = spec.getBoundingClientRect();
+  if (!r.width || !labGround) return;
+  if (labSpin) setLabDeg(labDeg + 24 * dt);
+  const scale = Math.min(2.6, r.width / 150);
+  if (labPlay) {
+    frameAcc += dt * labFps;
+    while (frameAcc >= 1) {
+      frameAcc -= 1; labFrame = (labFrame + 1) % 8;
+      const rad = labDeg * Math.PI / 180, stepPx = 3.4 * scale;
+      labScroll.x -= Math.cos(rad) * stepPx; labScroll.y += Math.sin(rad) * stepPx;
+      updateLabText();
+    }
+  }
+  const g = sctx;
+  g.save();
+  const pat = g.createPattern(labGround, "repeat");
+  g.translate(((labScroll.x % 256) + 256) % 256, ((labScroll.y % 256) + 256) % 256);
+  g.fillStyle = pat; g.fillRect(-256, -256, r.width + 512, r.height + 512);
+  g.restore();
+  g.imageSmoothingQuality = "high";
+  const cx = r.width / 2, cy = r.height / 2;
+  g.fillStyle = "rgba(30,18,8,0.25)"; g.beginPath(); g.ellipse(cx + 3 * scale, cy + 5 * scale, 17 * scale, 8 * scale, 0, 0, 7); g.fill();
+  drawAnt(g, atlas, cx, cy, labDeg, labFrame, scale);
+  // movement arrow
+  const rad = labDeg * Math.PI / 180, L = Math.min(r.width, r.height) * 0.42;
+  g.strokeStyle = "rgba(255,244,222,0.85)"; g.lineWidth = 2; g.setLineDash([4, 6]);
+  g.beginPath(); g.moveTo(cx + Math.cos(rad) * 46 * scale * 0.6, cy - Math.sin(rad) * 46 * scale * 0.6); g.lineTo(cx + Math.cos(rad) * L, cy - Math.sin(rad) * L); g.stroke();
+  g.setLineDash([]);
+}
+function dialAngle(e) {
+  const b = dial.getBoundingClientRect();
+  return norm(Math.atan2(-(e.clientY - (b.top + b.height / 2)), e.clientX - (b.left + b.width / 2)) * 180 / Math.PI);
+}
+dial.addEventListener("pointerdown", e => { dial.setPointerCapture(e.pointerId); setLabDeg(dialAngle(e), true); });
+dial.addEventListener("pointermove", e => { if (dial.hasPointerCapture(e.pointerId)) setLabDeg(dialAngle(e), true); });
+dial.addEventListener("keydown", e => {
+  const stepD = e.shiftKey ? 1 : 22.5;
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); setLabDeg(labDeg + stepD, true); }
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); setLabDeg(labDeg - stepD, true); }
+});
+
+// ---------- controls ----------
+const $ = id => document.getElementById(id);
+function setTool(t) {
+  tool = t;
+  for (const k of ["crumb", "lead", "scare"]) $("tool-" + k).setAttribute("aria-pressed", String(k === t));
+  world.classList.toggle("lead", t === "lead");
+}
+$("tool-crumb").onclick = () => setTool("crumb");
+$("tool-lead").onclick = () => setTool("lead");
+$("tool-scare").onclick = () => setTool("scare");
+$("n-ants").oninput = e => { setAntCount(+e.target.value); $("o-ants").textContent = e.target.value; };
+$("n-speed").oninput = e => { speedMul = +e.target.value; $("o-speed").textContent = speedMul.toFixed(2).replace(/0$/, "") + "×"; };
+$("n-size").oninput = e => { sizeMul = +e.target.value; $("o-size").textContent = sizeMul.toFixed(2).replace(/0$/, "") + "×"; };
+$("c-trails").onchange = e => { showTrails = e.target.checked; };
+$("c-debug").onchange = e => { showDebug = e.target.checked; };
+$("b-pause").onclick = () => { paused = !paused; $("b-pause").textContent = paused ? "Play" : "Pause"; };
+$("b-clear").onclick = () => {
+  groundSeed = (groundSeed * 48271) % 2147483647;
+  nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
+  W = 0; resize(); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
+  const n = ants.length; ants = []; setAntCount(n);
+  seedCrumbs();
+};
+document.querySelectorAll(".facing").forEach(b => b.addEventListener("click", () => {
+  facing = b.dataset.mode;
+  document.querySelectorAll(".facing").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === facing)));
+  lastLabKey = ""; updateLabText();
+}));
+$("n-fps").oninput = e => { labFps = +e.target.value; $("o-fps").textContent = labFps + " fps"; };
+$("c-spin").onchange = e => { labSpin = e.target.checked; };
+$("c-snap").onchange = e => { labSnap = e.target.checked; setLabDeg(labDeg); };
+$("c-play").onchange = e => { labPlay = e.target.checked; };
+
+function localXY(e) { const b = world.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; }
+world.addEventListener("pointerdown", e => {
+  const p = localXY(e);
+  pointer = { ...p, down: true };
+  if (tool === "crumb") {
+    const n = nestXY();
+    if (Math.hypot(p.x - n.x, p.y - n.y) > 30) addCrumb(p.x, p.y);
+  } else if (tool === "scare") {
+    for (const a of ants) if (Math.hypot(a.x - p.x, a.y - p.y) < 150) { a.flee = 1.2 + R() * 0.6; a.fx = p.x; a.fy = p.y; }
+  } else if (tool === "lead") {
+    world.setPointerCapture(e.pointerId);
+  }
+});
+world.addEventListener("pointermove", e => { const p = localXY(e); pointer.x = p.x; pointer.y = p.y; });
+const up = () => { pointer.down = false; };
+world.addEventListener("pointerup", up);
+world.addEventListener("pointercancel", up);
+
+// ---------- routing ----------
+function route() {
+  const v = location.hash === "#lab" ? "lab" : "colony";
+  $("view-colony").hidden = v !== "colony";
+  $("view-lab").hidden = v !== "lab";
+  $("tab-colony").setAttribute("aria-current", v === "colony" ? "page" : "false");
+  $("tab-lab").setAttribute("aria-current", v === "lab" ? "page" : "false");
+  $("sub").textContent = v === "lab"
+    ? "Every frame cut out of the sheet, with where each row claims to face and where it really does."
+    : "Sixteen directions, eight walking frames, one ant. Drop crumbs and watch the colony lay down a trail.";
+  requestAnimationFrame(() => { resize(); sizeSpecimen(); });
+}
+addEventListener("hashchange", route);
+addEventListener("resize", () => { resize(); sizeSpecimen(); });
+
+// ---------- start ----------
+function seedCrumbs() {
+  addCrumb(W * 0.72, H * 0.3, 140);
+  addCrumb(W * 0.8, H * 0.74, 110);
+}
+let last = performance.now(), fpsAcc = 0, fpsN = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!$("view-colony").hidden && !W) resize();
+  if (!$("view-colony").hidden && W) {
+    if (!seeded) seedWorld();
+    if (!paused) { const sub = 3; for (let i = 0; i < sub; i++) step(dt / sub); }
+    render();
+    fpsAcc += dt; fpsN++;
+    if (fpsAcc > 0.5) { $("hud-fps").textContent = Math.round(fpsN / fpsAcc) + " fps"; fpsAcc = 0; fpsN = 0; }
+  }
+  if (!$("view-lab").hidden) renderLab(dt);
+  requestAnimationFrame(frame);
+}
+let seeded = false;
+function seedWorld() {
+  seeded = true;
+  setAntCount(+$("n-ants").value);
+  seedCrumbs();
+  // let the colony find the food before the first frame is shown
+  for (let i = 0; i < 1500; i++) step(1 / 60);
+}
+function start() {
+  buildDial(); buildSheet();
+  route();
+  resize(); sizeSpecimen();
+  if (W) seedWorld();
+  updateLabText();
+  requestAnimationFrame(t => { last = t; frame(t); });
+}
+if (atlas.complete) start(); else atlas.onload = start;
+</script>

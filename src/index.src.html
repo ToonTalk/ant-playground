@@ -1,0 +1,1421 @@
+<title>Ant Sprite Playground</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one living scene up top (the colony), a field-notebook strip of controls under it;
+   the lab view is a two-column bench: specimen + compass on the left, both frame sheets on the right. */
+:root {
+  --loam: #ebe2d1;      /* page ground: dry sand */
+  --burrow: #f6f0e4;    /* panels */
+  --line: #d3c5ad;
+  --fg: #2a2119;
+  --muted: #6f604c;
+  --ant: #a8431c;       /* formica rust */
+  --amber: #b07a12;     /* pheromone */
+  --chip-bg: #e4d8c3;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --loam: #1a1511; --burrow: #241d17; --line: #3b3128; --fg: #efe4d2; --muted: #a8977f;
+    --ant: #e0703c; --amber: #e8b04c; --chip-bg: #2f261e;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --loam: #1a1511; --burrow: #241d17; --line: #3b3128; --fg: #efe4d2; --muted: #a8977f;
+  --ant: #e0703c; --amber: #e8b04c; --chip-bg: #2f261e;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--loam); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(28px, 4.2vw, 44px); line-height: 1; margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ant); }
+.sub { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.tabs { display: flex; gap: 4px; background: var(--burrow); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.tabs a { font-family: var(--display); font-weight: 700; text-decoration: none; color: var(--muted); padding: 7px 16px; border-radius: 999px; font-size: 15px; }
+.tabs a[aria-current="page"] { background: var(--fg); color: var(--loam); }
+.tabs a:focus-visible, button:focus-visible, input:focus-visible, svg:focus-visible, .thumb:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+
+/* colony */
+.stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #8a6a43; }
+#world { display: block; width: 100%; height: clamp(360px, 66vh, 720px); cursor: crosshair; touch-action: manipulation; }
+#world.lead { touch-action: none; cursor: grab; }
+#world.draw { touch-action: none; }
+.tip { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); font-size: 13px; color: #f3e7d3; background: rgba(26, 21, 17, .6); padding: 4px 12px; border-radius: 999px; pointer-events: none; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+.hud { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.pill { font-family: var(--mono); font-size: 12px; background: rgba(26, 21, 17, .72); color: #f3e7d3; padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(4px); }
+.pill b { color: #f0b85a; font-weight: 600; }
+.toolbar { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 4px; background: rgba(26, 21, 17, .78); padding: 5px; border-radius: 12px; backdrop-filter: blur(6px); max-width: calc(100% - 24px); }
+.toolbar button { all: unset; cursor: pointer; display: grid; justify-items: center; gap: 1px; padding: 6px 12px; border-radius: 8px; color: #d9c9b0; font-family: var(--body); font-size: 12px; }
+.toolbar button svg { width: 22px; height: 22px; }
+.toolbar button[aria-pressed="true"] { background: #f3e7d3; color: #1a1511; }
+.toolbar button:focus-visible { outline: 2px solid #f0b85a; }
+
+.colony-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 1060px) { .colony-row { grid-template-columns: minmax(0, 1fr) 340px; } }
+.guide { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+@media (min-width: 1060px) { .guide { height: clamp(360px, 66vh, 720px); } }
+@media (max-width: 1059px) { .g-log { max-height: 340px; } }
+.g-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.g-head h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
+.linkish { all: unset; cursor: pointer; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.linkish:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+.g-intro { margin: 0; font-size: 13.5px; color: var(--muted); }
+.g-log { flex: 1 1 auto; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.msg { padding: 8px 11px; border-radius: 12px; font-size: 14.5px; max-width: 92%; overflow-wrap: anywhere; }
+.msg p { margin: 0 0 6px; } .msg p:last-child { margin: 0; }
+.msg ul { margin: 4px 0; padding-left: 18px; }
+.msg.her { background: var(--chip-bg); align-self: flex-start; border-bottom-left-radius: 4px; }
+.msg.you { background: var(--fg); color: var(--loam); align-self: flex-end; border-bottom-right-radius: 4px; }
+.msg.err { background: transparent; border: 1px dashed var(--ant); color: var(--fg); }
+.msg .who { display: block; font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
+.msg.you .who { color: inherit; opacity: .7; }
+.msg.thinking .body::after { content: "…"; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.g-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { all: unset; cursor: pointer; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg); background: var(--loam); }
+.chip:focus-visible { outline: 2px solid var(--ant); }
+.g-ask { display: flex; gap: 8px; align-items: end; }
+.g-ask textarea { flex: 1; min-width: 0; resize: none; font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--loam); color: var(--fg); }
+.g-ask textarea:focus-visible { outline: 2px solid var(--ant); outline-offset: 1px; }
+.g-ask.pinned { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: var(--burrow); padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.btn:disabled { opacity: .5; cursor: default; }
+.g-sense summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.g-sense pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.5px; margin: 6px 0 0; max-height: 220px; overflow: auto; background: var(--loam); padding: 8px; border-radius: 8px; }
+.g-settings { display: grid; gap: 8px; font-size: 13.5px; background: var(--loam); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.g-settings label { display: grid; gap: 3px; }
+.g-settings select, .g-settings input[type="text"], .g-settings input[type="password"] { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--burrow); color: var(--fg); min-width: 0; }
+.g-settings .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.g-settings p { margin: 0; color: var(--muted); }
+.g-settings a { color: var(--ant); }
+.notebook { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 28px; background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field label, .lbl { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.field output { font-variant-numeric: tabular-nums; color: var(--fg); }
+input[type="range"] { width: 100%; accent-color: var(--ant); }
+.checks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; cursor: pointer; }
+.checks input { accent-color: var(--ant); width: 16px; height: 16px; }
+.btn { all: unset; cursor: pointer; font-family: var(--display); font-weight: 700; padding: 7px 14px; border-radius: 9px; background: var(--fg); color: var(--loam); font-size: 14px; text-align: center; }
+.btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+.btn:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+.hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+/* lab */
+.lab { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .lab { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
+.panel h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+.panel h3 { font-family: var(--display); font-size: 16px; margin: 0; font-weight: 700; }
+#specimen { width: 100%; aspect-ratio: 1 / 1; max-width: 100%; border-radius: 10px; display: block; background: #8a6a43; }
+.compass-row { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 14px; align-items: center; }
+@media (max-width: 420px) { .compass-row { grid-template-columns: minmax(0, 1fr); justify-items: center; } }
+#dial { width: 160px; height: 160px; touch-action: none; cursor: grab; display: block; }
+#dial .rim { fill: var(--loam); stroke: var(--line); stroke-width: 1.5; }
+#dial .tick { stroke: var(--muted); stroke-width: 1.2; }
+#dial .tick.major { stroke: var(--fg); stroke-width: 2; }
+#dial text { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+#dial .needle { stroke: var(--ant); stroke-width: 3; stroke-linecap: round; }
+#dial .hub { fill: var(--fg); }
+.readout { font-size: 14px; display: grid; gap: 6px; min-width: 0; }
+.readout .big { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; font-variant-numeric: tabular-nums; }
+.readout p { margin: 0; }
+.controls-inline { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.controls-inline .field { flex: 1 1 160px; }
+.sheetrow { display: grid; gap: 6px; }
+.strip { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 4px; }
+.thumb { all: unset; flex: none; border-radius: 8px; background-color: var(--chip-bg); background-repeat: no-repeat; cursor: pointer; position: relative; }
+.thumb span { position: absolute; left: 6px; top: 3px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.thumb.on { box-shadow: inset 0 0 0 2px var(--ant); }
+.thumb.still { cursor: default; }
+.notes { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; max-width: 70ch; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Ant Sprite <em>Playground</em></h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <nav class="tabs" aria-label="Views">
+      <a href="#colony" id="tab-colony" aria-current="page">Colony</a>
+      <a href="#lab" id="tab-lab">Sprite lab</a>
+    </nav>
+  </header>
+
+  <!-- COLONY -->
+  <section id="view-colony" class="wrap" style="gap:12px">
+    <div class="colony-row">
+    <div class="stage">
+      <canvas id="world" class="draw" aria-label="Ant colony. Tap to drop crumbs; ants carry them to the nest."></canvas>
+      <div class="hud">
+        <span class="pill">ants <b id="hud-ants">40</b></span>
+        <span class="pill">carrying <b id="hud-carry">0</b></span>
+        <span class="pill">crumbs home <b id="hud-home">0</b></span>
+        <span class="pill" id="pill-eaten" style="display:none">eaten <b id="hud-eaten">0</b></span>
+        <span class="pill" id="hud-fps">— fps</span>
+      </div>
+      <div class="tip" id="tip" aria-live="polite">Tap the ground to drop a crumb, or drag to sprinkle a line of them</div>
+      <div class="toolbar" role="group" aria-label="Tool">
+        <button id="tool-crumb" aria-pressed="true" title="Click the ground to drop a crumb">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 14c-1-4 2-8 6-8 3 0 4 2 6 2 2 1 3 3 2 6-1 4-5 5-8 5s-5-2-6-5z" fill="#d9a85b" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="11" r="1" fill="currentColor"/><circle cx="14" cy="14" r="1" fill="currentColor"/></svg>Crumb</button>
+        <button id="tool-lead" aria-pressed="false" title="Hold and drag: nearby ants follow">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/></svg>Lead</button>
+        <button id="tool-scare" aria-pressed="false" title="Tap near ants to scare them away">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>Scatter</button>
+        <button id="tool-eat" aria-pressed="false" title="Tap or drag to lick up ants">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c3-3 8-3 12-1l4 2"/><path d="M3 9c2 3 7 4 12 2"/><path d="M15 10c2 1 3 3 5 3 1.2 0 1.5 1.4.3 1.8-2.2.7-4-.6-5.3-2"/></svg>Anteater</button>
+      </div>
+    </div>
+
+    <aside class="guide" id="guide" aria-labelledby="g-title">
+      <div class="g-head">
+        <h2 id="g-title">Aunt Hillary</h2>
+        <button class="linkish" id="g-gear" type="button" aria-expanded="false" aria-controls="g-settings">AI settings</button>
+      </div>
+      <p class="g-intro">In Hofstadter's <i>Gödel, Escher, Bach</i>, Aunt Hillary is a whole ant colony who can talk. No single ant understands a word; the colony does. You are her old friend, the Anteater.</p>
+      <div class="g-settings" id="g-settings" style="display:none"></div>
+      <div class="g-log" id="g-log" aria-live="polite"></div>
+      <div class="g-chips" id="g-chips"></div>
+      <form class="g-ask" id="g-form">
+        <textarea id="g-q" rows="2" placeholder="Say something to Aunt Hillary…" aria-label="Your words to Aunt Hillary"></textarea>
+        <button class="btn" id="g-send" type="submit">Ask</button>
+      </form>
+      <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><pre id="g-sense"></pre></details>
+    </aside>
+    </div>
+
+    <div class="notebook">
+      <div class="field">
+        <label for="n-ants">Ants <output id="o-ants">40</output></label>
+        <input id="n-ants" type="range" min="1" max="160" value="40">
+      </div>
+      <div class="field">
+        <label for="n-speed">Walking speed <output id="o-speed">1.0×</output></label>
+        <input id="n-speed" type="range" min="0.25" max="2.5" step="0.05" value="1">
+      </div>
+      <div class="field">
+        <label for="n-size">Ant size <output id="o-size">1.0×</output></label>
+        <input id="n-size" type="range" min="0.4" max="2.5" step="0.05" value="1">
+      </div>
+      <div class="field">
+        <span class="lbl">Show</span>
+        <div class="checks">
+          <label><input type="checkbox" id="c-trails" checked> Trails</label>
+          <label><input type="checkbox" id="c-debug"> Headings</label>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">Scene</span>
+        <div class="checks">
+          <button class="btn" id="b-pause">Pause</button>
+          <button class="btn ghost" id="b-spider">Let in a spider</button>
+          <button class="btn ghost" id="b-clear">New ground</button>
+        </div>
+      </div>
+      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Ants that are eaten are replaced: the queen lays a new one at the nest every second and a half.</p>
+    </div>
+  </section>
+
+  <!-- LAB -->
+  <section id="view-lab" class="lab" hidden>
+    <div class="panel">
+      <h2>Specimen</h2>
+      <canvas id="specimen" aria-label="One ant walking in the chosen direction"></canvas>
+      <div class="compass-row">
+        <svg id="dial" viewBox="-100 -100 200 200" tabindex="0" role="slider" aria-label="Heading in degrees" aria-valuemin="0" aria-valuemax="359" aria-valuenow="0"></svg>
+        <div class="readout">
+          <span class="lbl">Heading</span>
+          <span class="big" id="r-deg">0°</span>
+          <p id="r-how"></p>
+        </div>
+      </div>
+      <div class="controls-inline">
+        <div class="field">
+          <label for="n-fps">Frame rate <output id="o-fps">10 fps</output></label>
+          <input id="n-fps" type="range" min="1" max="24" value="10">
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="c-carry"> Carrying</label>
+          <label><input type="checkbox" id="c-spider"> Spider</label>
+          <label><input type="checkbox" id="c-ghost"> Ghost last frame</label>
+          <label><input type="checkbox" id="c-spin" checked> Spin</label>
+          <label><input type="checkbox" id="c-play" checked> Walk</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>The sheets</h2>
+      <div class="sheetrow">
+        <h3>Ant walking</h3>
+        <div class="strip" id="strip-0"></div>
+      </div>
+      <div class="sheetrow">
+        <h3>Ant carrying a crumb</h3>
+        <div class="strip" id="strip-1"></div>
+      </div>
+      <div class="sheetrow">
+        <h3>Spider walking</h3>
+        <div class="strip" id="strip-2"></div>
+      </div>
+      <p class="hint">Click a frame to stop on it. Arrow keys step through frames once one is selected.</p>
+      <div class="sheetrow">
+        <h3>Food: a pile being eaten, then single crumbs</h3>
+        <div class="strip" id="strip-food"></div>
+      </div>
+      <ul class="notes">
+        <li>All the walkers are drawn from straight above with the head up, so one row turns to face any of 360 directions.</li>
+        <li>A pile shows one of four stages depending on how much is left. Sprinkled crumbs and dropped ones use the single crumbs.</li>
+        <li>Each frame is pinned on the tip of the abdomen and scaled by its width, so the body holds still while the legs move.</li>
+        <li>The carrying ant was drawn darker than the walking one. Its body is tinted to match; the crumb is left alone.</li>
+        <li>In the colony, frames advance with distance walked rather than time, so the feet keep pace at any speed.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+"use strict";
+const ATLAS_URI = "%%ATLAS%%";
+const FOOD_URI = "%%FOOD%%";
+const SPIDER_URI = "%%SPIDER%%";
+const EXTRAS = %%EXTRAS%%;  // sizes measured by tools/extract_extras.py
+const EDITION = "%%EDITION%%";   // "artifact" on claude.ai, "site" on GitHub Pages
+const TILE = 200;          // atlas tile; row 0 = walking, row 1 = carrying, both facing up
+const SPRITE_K = 0.4;      // tile scale at "1×" ant size
+const STRIDE = 0.06;       // distance per frame, in tile widths
+const ST = EXTRAS.spider.tile;
+const SPIDER_STRIDE = 0.09;
+const ANT_LEN = 42;        // one ant-length on screen at 1×, for describing distances
+
+const norm = d => ((d % 360) + 360) % 360;
+const diff = (a, b) => ((a - b) % 360 + 540) % 360 - 180;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// heading: degrees, 0 = right, 90 = up. The drawings face up, so turn by (heading - 90).
+function drawAnt(ctx, img, x, y, deg, frame, scale, carrying, alpha = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((90 - deg) * Math.PI / 180);
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  const s = TILE * scale;
+  ctx.drawImage(img, (frame % 8) * TILE, carrying ? TILE : 0, TILE, TILE, -s / 2, -s / 2, s, s);
+  ctx.restore();
+}
+function drawSpider(ctx, img, x, y, deg, frame, scale, alpha = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate((90 - deg) * Math.PI / 180);
+  if (alpha !== 1) ctx.globalAlpha = alpha;
+  const s = ST * scale;
+  ctx.drawImage(img, (frame % 8) * ST, 0, ST, ST, -s / 2, -s / 2, s, s);
+  ctx.restore();
+}
+function drawSpiderShadow(ctx, x, y, deg, scale) {
+  const L = EXTRAS.spider.body_px * scale;
+  ctx.save();
+  ctx.translate(x + 5, y + 8);
+  ctx.rotate(-deg * Math.PI / 180);
+  ctx.fillStyle = "rgba(30,18,8,0.16)";
+  ctx.beginPath(); ctx.ellipse(0, 0, L * 0.42, L * 0.3, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawShadow(ctx, x, y, deg, scale) {
+  ctx.save();
+  ctx.translate(x + 3 * scale * 2, y + 5 * scale * 2);
+  ctx.rotate(-deg * Math.PI / 180);
+  ctx.fillStyle = "rgba(30,18,8,0.18)";
+  ctx.beginPath(); ctx.ellipse(-TILE * scale * 0.04, 0, TILE * scale * 0.2, TILE * scale * 0.065, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
+
+// ---------- seeded random + procedural ground ----------
+function rng(seed) {
+  let s = seed >>> 0 || 1;
+  return () => { s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
+}
+function makeGround(w, h, seed, wrap) {
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+  const g = c.getContext("2d"), R = rng(seed);
+  if (wrap) g.fillStyle = "#91714a";   // a repeating tile needs a flat base
+  else {
+    const grad = g.createLinearGradient(0, 0, w * 0.4, h);
+    grad.addColorStop(0, "#9c7a4e"); grad.addColorStop(1, "#86663f");
+    g.fillStyle = grad;
+  }
+  g.fillRect(0, 0, w, h);
+  const each = (x, y, fn) => {
+    if (!wrap) return fn(x, y);
+    for (const dx of [-w, 0, w]) for (const dy of [-h, 0, h]) fn(x + dx, y + dy);
+  };
+  for (let i = 0; i < (w * h) / 9000; i++) {
+    const x = R() * w, y = R() * h, r = 30 + R() * 90, dark = R() < 0.55;
+    each(x, y, (X, Y) => {
+      const rg = g.createRadialGradient(X, Y, 0, X, Y, r);
+      rg.addColorStop(0, dark ? "rgba(70,48,26,0.22)" : "rgba(190,160,110,0.18)");
+      rg.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = rg; g.fillRect(X - r, Y - r, r * 2, r * 2);
+    });
+  }
+  const grains = ["#6b4f2f", "#b4935f", "#c9ac78", "#5a4128", "#a3845a", "#d8c49a"];
+  for (let i = 0; i < (w * h) / 22; i++) {
+    const x = R() * w, y = R() * h, s = R() < 0.92 ? 0.6 + R() * 0.9 : 1.6 + R() * 1.4;
+    g.fillStyle = grains[(R() * grains.length) | 0];
+    g.globalAlpha = 0.35 + R() * 0.5;
+    each(x, y, (X, Y) => g.fillRect(X, Y, s, s));
+  }
+  g.globalAlpha = 1;
+  for (let i = 0; i < (w * h) / 5200; i++) {
+    const x = R() * w, y = R() * h, rx = 2 + R() * 6, ry = rx * (0.55 + R() * 0.4), a = R() * Math.PI;
+    const tone = 120 + R() * 90 | 0;
+    each(x, y, (X, Y) => {
+      g.save(); g.translate(X, Y); g.rotate(a);
+      g.fillStyle = "rgba(40,28,15,0.35)"; g.beginPath(); g.ellipse(1.2, 1.4, rx, ry, 0, 0, 7); g.fill();
+      g.fillStyle = `rgb(${tone},${tone * 0.86 | 0},${tone * 0.7 | 0})`; g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, 7); g.fill();
+      g.fillStyle = "rgba(255,245,225,0.35)"; g.beginPath(); g.ellipse(-rx * 0.3, -ry * 0.35, rx * 0.45, ry * 0.35, 0, 0, 7); g.fill();
+      g.restore();
+    });
+  }
+  if (!wrap) {
+    for (let i = 0; i < (w * h) / 60000; i++) {
+      const x = R() * w, y = R() * h, len = 30 + R() * 70, a = R() * Math.PI * 2, bend = (R() - 0.5) * 30;
+      g.strokeStyle = R() < 0.5 ? "rgba(214,190,128,0.75)" : "rgba(92,62,32,0.7)";
+      g.lineWidth = 1.2 + R() * 1.8; g.lineCap = "round";
+      g.beginPath(); g.moveTo(x, y);
+      g.quadraticCurveTo(x + Math.cos(a) * len / 2 + bend, y + Math.sin(a) * len / 2 - bend, x + Math.cos(a) * len, y + Math.sin(a) * len);
+      g.stroke();
+    }
+  }
+  return c;
+}
+
+const atlas = new Image();
+atlas.src = ATLAS_URI;
+const foodImg = new Image(); foodImg.src = FOOD_URI;
+const spiderImg = new Image(); spiderImg.src = SPIDER_URI;
+
+// ---------- COLONY ----------
+const world = document.getElementById("world");
+const wctx = world.getContext("2d");
+let W = 0, H = 0, DPR = 1, ground = null, groundSeed = 7;
+let nest = { fx: 0.24, fy: 0.62 };
+let crumbs = [];
+let ants = [];
+let delivered = 0;
+let antTarget = 40, hatchT = 0;            // the queen lays until the colony is back to size
+let spider = null, spiderEaten = 0, youEaten = 0;
+let licks = [];                            // tongue flicks, for drawing
+let simTime = 0, events = [];              // what happened, for Aunt Hillary
+function note(text) {
+  events.push({ t: simTime, text });
+  if (events.length > 30) events.shift();
+}
+let paused = reduceMotion;
+let tool = "crumb";
+let pointer = { x: 0, y: 0, down: false };
+let showTrails = true, showDebug = false;
+let speedMul = 1, sizeMul = 1;
+const GRID = 6;
+let gw = 0, gh = 0, trail = new Float32Array(0);
+const trailCanvas = document.createElement("canvas");
+const tctx = trailCanvas.getContext("2d");
+let trailImg = null;
+const R = rng(1234);
+
+function nestXY() { return { x: nest.fx * W, y: nest.fy * H }; }
+
+function resize() {
+  const r = world.getBoundingClientRect();
+  const nw = Math.round(r.width), nh = Math.round(r.height);
+  if (!nw || !nh || (nw === W && nh === H)) return;
+  const sx = W ? nw / W : 1, sy = H ? nh / H : 1;
+  for (const a of ants) { a.x *= sx; a.y *= sy; }
+  for (const c of crumbs) { c.x *= sx; c.y *= sy; }
+  W = nw; H = nh; DPR = Math.min(2, window.devicePixelRatio || 1);
+  world.width = Math.round(W * DPR); world.height = Math.round(H * DPR);
+  ground = makeGround(W, H, groundSeed, false);
+  drawNestOnGround();
+  gw = Math.ceil(W / GRID); gh = Math.ceil(H / GRID);
+  trail = new Float32Array(gw * gh);
+  trailCanvas.width = gw; trailCanvas.height = gh;
+  trailImg = tctx.createImageData(gw, gh);
+}
+
+function drawNestOnGround() {
+  const g = ground.getContext("2d"), { x, y } = nestXY(), Rn = rng(groundSeed * 31 + 5);
+  for (let i = 0; i < 900; i++) {
+    const a = Rn() * Math.PI * 2, d = 14 + Math.pow(Rn(), 0.7) * 42;
+    const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.8;
+    g.fillStyle = ["#c7a46d", "#b8935c", "#d6b880", "#a88552"][(Rn() * 4) | 0];
+    g.globalAlpha = 0.55 + Rn() * 0.45;
+    const s = 1 + Rn() * 2.4;
+    g.fillRect(px, py, s, s);
+  }
+  g.globalAlpha = 1;
+  const rg = g.createRadialGradient(x, y, 2, x, y, 16);
+  rg.addColorStop(0, "#120b05"); rg.addColorStop(0.6, "#2b1a0c"); rg.addColorStop(1, "rgba(60,40,20,0)");
+  g.fillStyle = rg; g.beginPath(); g.ellipse(x, y, 17, 13, 0, 0, 7); g.fill();
+}
+
+function makeAnt() {
+  const n = nestXY(), a = R() * 360;
+  return {
+    x: n.x + Math.cos(a) * 10, y: n.y + Math.sin(a) * 8,
+    dir: a, turn: 0, walked: R() * 40, pace: 0.85 + R() * 0.3,
+    carrying: false, flee: 0, fx: 0, fy: 0
+  };
+}
+function setAntCount(n) {
+  antTarget = n;
+  while (ants.length < n) ants.push(makeAnt());
+  ants.length = n;
+}
+function addCrumb(x, y, amount = 45, fall = 1) {
+  const Rc = rng((x * 73856093) ^ (y * 19349663));
+  crumbs.push({ x, y, amount, max: amount, rot: (Rc() - 0.5) * 1.2, variant: (Rc() * 4) | 0, fall });   // fall: 1 = in the air, 0 = landed
+}
+// how big a crumb or pile looks right now, in screen px across
+function crumbSize(c) {
+  if (c.max > 8) return 8.5 * Math.sqrt(c.max) * EXTRAS.food.piles[pileStage(c)] / EXTRAS.food.piles[0];
+  return 7 + 3 * Math.sqrt(c.amount);
+}
+function pileStage(c) { const f = c.amount / c.max; return f > 0.62 ? 0 : f > 0.32 ? 1 : f > 0.12 ? 2 : 3; }
+
+// where something is, in words, as seen from the nest (up the screen = north)
+function where(x, y) {
+  const n = nestXY(), dx = x - n.x, dy = n.y - y, d = Math.hypot(dx, dy) / (ANT_LEN * sizeMul);
+  if (d < 1.5) return "right at the nest";
+  const names = ["east", "north-east", "north", "north-west", "west", "south-west", "south", "south-east"];
+  const dir = names[Math.round(norm(Math.atan2(dy, dx) * 180 / Math.PI) / 45) % 8];
+  return `${Math.round(d)} ant-lengths ${dir} of the nest`;
+}
+let ripples = [];
+function scatter(x, y) {
+  const R0 = 210;
+  ripples.push({ x, y, t: 0 });
+  // the disturbance wipes the scent, so they can't just follow it straight back
+  const r = R0 / GRID, ci = x / GRID, cj = y / GRID;
+  for (let j = Math.max(0, (cj - r) | 0); j < Math.min(gh, cj + r + 1); j++)
+    for (let i = Math.max(0, (ci - r) | 0); i < Math.min(gw, ci + r + 1); i++)
+      if (Math.hypot(i - ci, j - cj) < r) trail[j * gw + i] = 0;
+  let n = 0, dropped = 0;
+  for (const a of ants) {
+    const d = Math.hypot(a.x - x, a.y - y);
+    if (d > R0) continue;
+    n++;
+    a.flee = 2.2 + R() * 1.4 - d / R0; a.fx = x; a.fy = y;
+    a.dir = angTo(x, y, a.x, a.y) + (R() - 0.5) * 50;            // bolt away at once
+    if (a.carrying && R() < 0.7) { a.carrying = false; addCrumb(a.x, a.y, 1, 0); dropped++; }   // drop it in a panic
+  }
+  let spooked = false;
+  if (spider && spider.mode !== "leave" && Math.hypot(spider.x - x, spider.y - y) < R0 * 0.7) { spider.mode = "leave"; spider.rest = 0; spooked = true; }
+  note(`The Anteater stamped ${where(x, y)}. ${n} ants panicked${dropped ? `, ${dropped} dropped their crumbs` : ""}, and the scent there was wiped out.${spooked ? " The spider was frightened off." : ""}`);
+}
+
+// ---------- the spider ----------
+const spiderScale = () => antScale() * 3.4 * 30 / EXTRAS.spider.abdomen_px;   // abdomen 3.4× the ant's
+function releaseSpider() {
+  if (spider) { spider.mode = "leave"; spider.rest = 0; return; }
+  const n = nestXY(), side = (R() * 4) | 0, m = 70;
+  let x = side === 0 ? -m : side === 1 ? W + m : R() * W;
+  let y = side === 2 ? -m : side === 3 ? H + m : R() * H;
+  // come in from the side away from the nest
+  if (Math.hypot(x - n.x, y - n.y) < Math.min(W, H) * 0.5) { x = W - x; y = H - y; }
+  spider = { x, y, dir: angTo(x, y, W / 2, H / 2), walked: 0, mode: "hunt", rest: 0, meals: 0, pause: 0, burst: 2 };
+  note(`A spider crept in ${where(Math.max(0, Math.min(W, x)), Math.max(0, Math.min(H, y)))}.`);
+  updateSpiderButton();
+}
+function updateSpiderButton() {
+  const b = document.getElementById("b-spider");
+  if (b) b.textContent = spider ? "Shoo the spider" : "Let in a spider";
+}
+function stepSpider(dt) {
+  const s = spider; if (!s) return;
+  const sc = spiderScale(), mouth = EXTRAS.spider.body_px * sc * 0.5;
+  const pace = speedMul * (0.6 + sizeMul * 0.55);
+  if (s.rest > 0) {                       // eating: holds still
+    s.rest -= dt;
+    if (s.rest <= 0 && s.meals >= 3) { s.mode = "leave"; note("The spider has eaten its fill and is wandering off."); }
+    return;
+  }
+  let target, speed;
+  if (s.mode === "leave") {
+    const ex = s.x < W / 2 ? -200 : W + 200, ey = s.y < H / 2 ? -200 : H + 200;
+    target = Math.min(s.x, W - s.x) < Math.min(s.y, H - s.y) ? angTo(s.x, s.y, ex, s.y) : angTo(s.x, s.y, s.x, ey);
+    speed = 75 * pace;
+    if (s.x < -90 || s.y < -90 || s.x > W + 90 || s.y > H + 90) { spider = null; note("The spider has gone."); updateSpiderButton(); return; }
+  } else {
+    let prey = null, bd = Infinity;
+    for (const a of ants) { const d = Math.hypot(a.x - s.x, a.y - s.y) * (a.carrying ? 0.8 : 1); if (d < bd) { bd = d; prey = a; } }
+    if (!prey) { s.mode = "leave"; return; }
+    target = angTo(s.x, s.y, prey.x, prey.y);
+    const d = Math.hypot(prey.x - s.x, prey.y - s.y);
+    // spiders move in bursts: creep, freeze, then rush when close
+    s.burst -= dt;
+    if (s.burst <= 0) { s.pause = d > 140 ? 0.4 + R() * 0.8 : 0; s.burst = 1.5 + R() * 2; }
+    if (s.pause > 0) { s.pause -= dt; speed = 0; }
+    else speed = (d < 120 ? 125 : 38) * pace;
+    if (d < mouth + 6) {
+      ants.splice(ants.indexOf(prey), 1);
+      if (prey.carrying) addCrumb(prey.x, prey.y, 1, 0);
+      s.rest = 2.4; s.meals++; spiderEaten++;
+      note(`The spider caught one of my ants ${where(s.x, s.y)}.`);
+      for (const a of ants) if (Math.hypot(a.x - s.x, a.y - s.y) < 170) { a.flee = Math.max(a.flee, 1.4 + R()); a.fx = s.x; a.fy = s.y; }
+      return;
+    }
+  }
+  const dd = diff(target, s.dir);
+  s.dir = norm(s.dir + Math.max(-220 * dt, Math.min(220 * dt, dd)));
+  const rad = s.dir * Math.PI / 180;
+  s.x += Math.cos(rad) * speed * dt; s.y -= Math.sin(rad) * speed * dt;
+  s.walked += speed * dt;
+}
+
+// ---------- the anteater's tongue ----------
+let lickBatch = null;
+function lick(x, y) {
+  const reach = 20 * sizeMul + 6;
+  licks.push({ x, y, t: 0 });
+  let n = 0;
+  for (let i = ants.length - 1; i >= 0; i--) {
+    const a = ants[i];
+    if (Math.hypot(a.x - x, a.y - y) < reach) { if (a.carrying) addCrumb(a.x, a.y, 1, 0); ants.splice(i, 1); n++; }
+  }
+  for (const a of ants) if (Math.hypot(a.x - x, a.y - y) < 90) { a.flee = Math.max(a.flee, 0.9); a.fx = x; a.fy = y; }
+  youEaten += n;
+  if (lickBatch) { lickBatch.n += n; } else lickBatch = { n, x, y };
+}
+function endLick() {
+  if (!lickBatch) return;
+  const b = lickBatch; lickBatch = null;
+  note(b.n ? `The Anteater licked up ${b.n} of my ants ${where(b.x, b.y)}.` : `The Anteater's tongue flicked ${where(b.x, b.y)} and missed.`);
+}
+
+function trailAt(x, y) {
+  const i = (x / GRID) | 0, j = (y / GRID) | 0;
+  if (i < 0 || j < 0 || i >= gw || j >= gh) return 0;
+  return trail[j * gw + i];
+}
+function turnToward(a, target, maxStep) {
+  const d = diff(target, a.dir);
+  a.dir = norm(a.dir + Math.max(-maxStep, Math.min(maxStep, d)));
+}
+const angTo = (ax, ay, bx, by) => norm(Math.atan2(-(by - ay), bx - ax) * 180 / Math.PI);
+const antScale = () => sizeMul * SPRITE_K;
+
+function step(dt) {
+  const n = nestXY();
+  const decay = Math.pow(0.94, dt);
+  for (let i = 0; i < trail.length; i++) trail[i] *= decay;
+  const baseSpeed = 34 * speedMul * (0.6 + sizeMul * 0.55);
+  const maxTurn = 260 * dt;
+  const reach = 4 + TILE * antScale() * 0.2;   // mouth to crumb center
+  simTime += dt;
+  if (ants.length < antTarget) {
+    hatchT += dt;
+    if (hatchT > 1.5) { hatchT = 0; ants.push(makeAnt()); }
+  } else hatchT = 0;
+  stepSpider(dt);
+  const sees = 2 * ANT_LEN * sizeMul;          // how close a spider must be before an ant notices
+
+  for (const a of ants) {
+    if (spider && spider.rest <= 0 && spider.mode !== "leave" && Math.hypot(spider.x - a.x, spider.y - a.y) < sees) {
+      a.flee = Math.max(a.flee, 0.5); a.fx = spider.x; a.fy = spider.y;
+    }
+    a.turn += (R() - 0.5) * 900 * dt;
+    a.turn *= Math.pow(0.04, dt);
+    a.turn = Math.max(-120, Math.min(120, a.turn));
+    let target = null, urgency = 1;
+
+    if (a.flee > 0) {
+      a.flee -= dt;
+      target = angTo(a.fx, a.fy, a.x, a.y) + Math.sin(a.walked * 0.08) * 35; urgency = 1.8;   // zigzag away
+    } else if (tool === "lead" && pointer.down && Math.hypot(pointer.x - a.x, pointer.y - a.y) < 280) {
+      if (Math.hypot(pointer.x - a.x, pointer.y - a.y) > 16) target = angTo(a.x, a.y, pointer.x, pointer.y);
+      urgency = 1.4;
+    } else if (a.carrying) {
+      target = angTo(a.x, a.y, n.x, n.y);
+      if (Math.hypot(n.x - a.x, n.y - a.y) < 14) {
+        a.carrying = false; delivered++; a.dir = norm(a.dir + 180 + (R() - 0.5) * 60);
+        document.getElementById("hud-home").textContent = delivered;
+        target = null;
+      }
+    } else {
+      let best = null, bd = 80;
+      for (const c of crumbs) { if (c.fall > 0) continue; const d = Math.hypot(c.x - a.x, c.y - a.y); if (d < bd) { bd = d; best = c; } }
+      if (best) {
+        target = angTo(a.x, a.y, best.x, best.y);
+        if (bd < reach + crumbSize(best) * 0.3 && best.amount > 0) {
+          best.amount--; a.carrying = true; a.dir = norm(a.dir + 180); target = null;
+        }
+      } else {
+        const look = 22, spread = 32;
+        let bestV = 0.06, bestA = null;
+        for (const off of [-spread, 0, spread]) {
+          const ang = (a.dir + off) * Math.PI / 180;
+          const sx = a.x + Math.cos(ang) * look, sy = a.y - Math.sin(ang) * look;
+          let v = trailAt(sx, sy);
+          if (Math.hypot(sx - n.x, sy - n.y) > Math.hypot(a.x - n.x, a.y - n.y)) v *= 1.35;
+          if (v > bestV) { bestV = v; bestA = a.dir + off; }
+        }
+        if (bestA !== null) { target = norm(bestA); urgency = 0.7; }
+      }
+    }
+
+    const m = 24;
+    if (a.x < m || a.y < m || a.x > W - m || a.y > H - m) { target = angTo(a.x, a.y, W / 2, H / 2); urgency = 1.2; }
+
+    if (target !== null) turnToward(a, norm(target + a.turn * 0.15), maxTurn * urgency);
+    else a.dir = norm(a.dir + a.turn * dt);
+
+    const sp = baseSpeed * a.pace * (a.flee > 0 ? 2.8 : 1) * (a.carrying ? 0.85 : 1);
+    const rad = a.dir * Math.PI / 180;
+    a.x += Math.cos(rad) * sp * dt;
+    a.y -= Math.sin(rad) * sp * dt;
+    a.walked += sp * dt;
+
+    if (a.carrying) {
+      const i = (a.x / GRID) | 0, j = (a.y / GRID) | 0;
+      if (i >= 0 && j >= 0 && i < gw && j < gh) trail[j * gw + i] = Math.min(4, trail[j * gw + i] + 3.2 * dt);
+    }
+  }
+  for (const c of crumbs) if (c.amount <= 0 && c.max > 8) note(`The pile ${where(c.x, c.y)} has all been carried home.`);
+  crumbs = crumbs.filter(c => c.amount > 0);
+  for (const c of crumbs) if (c.fall > 0) c.fall = Math.max(0, c.fall - dt / 0.4);
+  for (const r of ripples) r.t += dt;
+  ripples = ripples.filter(r => r.t < 0.7);
+  for (const l of licks) l.t += dt;
+  licks = licks.filter(l => l.t < 0.3);
+}
+
+function drawCrumb(g, c) {
+  const FT = EXTRAS.food.tile, pile = c.max > 8;
+  const ext = pile ? EXTRAS.food.piles[pileStage(c)] : EXTRAS.food.singles[c.variant];
+  const s = crumbSize(c) / ext;                 // drawn tile size
+  const lift = c.fall * c.fall * 70;            // dropped crumbs fall in
+  g.save(); g.translate(c.x, c.y - lift); g.rotate(c.rot);
+  g.shadowColor = `rgba(35,20,8,${0.45 * (1 - c.fall * 0.7)})`;
+  g.shadowBlur = pile ? 6 : 3; g.shadowOffsetX = 2 + lift * 0.1; g.shadowOffsetY = 3 + lift * 0.5;
+  g.drawImage(foodImg, (pile ? pileStage(c) : c.variant) * FT, pile ? 0 : FT, FT, FT, -s / 2, -s / 2, s, s);
+  g.restore();
+}
+
+function render() {
+  const g = wctx;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  g.drawImage(ground, 0, 0, W, H);
+
+  if (showTrails) {
+    const d = trailImg.data;
+    for (let i = 0; i < trail.length; i++) {
+      const v = Math.min(1, trail[i] / 1.6);
+      d[i * 4] = 255; d[i * 4 + 1] = 196; d[i * 4 + 2] = 92; d[i * 4 + 3] = v * 120;
+    }
+    tctx.putImageData(trailImg, 0, 0);
+    g.drawImage(trailCanvas, 0, 0, gw * GRID, gh * GRID);
+  }
+  for (const c of crumbs) drawCrumb(g, c);
+
+  const s = antScale();
+  const stride = STRIDE * TILE * s;
+  let carrying = 0;
+  for (const a of ants) drawShadow(g, a.x, a.y, a.dir, s);
+  for (const a of ants) {
+    drawAnt(g, atlas, a.x, a.y, a.dir, Math.floor(a.walked / stride) % 8, s, a.carrying);
+    if (a.carrying) carrying++;
+  }
+  if (spider) {
+    const ss = spiderScale();
+    drawSpiderShadow(g, spider.x, spider.y, spider.dir, ss);
+    drawSpider(g, spiderImg, spider.x, spider.y, spider.dir, Math.floor(spider.walked / (SPIDER_STRIDE * ST * ss)) % 8, ss);
+  }
+  for (const l of licks) {       // a sticky pink tongue tip darts in and back
+    const k = Math.sin(Math.PI * l.t / 0.3), r = (20 * sizeMul + 6) * k;
+    g.fillStyle = `rgba(214,92,128,${0.85 * k})`;
+    g.beginPath(); g.ellipse(l.x, l.y, r, r * 0.7, 0.4, 0, 7); g.fill();
+    g.fillStyle = `rgba(255,190,205,${0.6 * k})`;
+    g.beginPath(); g.ellipse(l.x - r * 0.25, l.y - r * 0.2, r * 0.35, r * 0.2, 0.4, 0, 7); g.fill();
+  }
+  document.getElementById("hud-carry").textContent = carrying;
+  document.getElementById("hud-ants").textContent = ants.length;
+  const eaten = spiderEaten + youEaten;
+  const pe = document.getElementById("pill-eaten");
+  pe.style.display = eaten ? "" : "none";
+  document.getElementById("hud-eaten").textContent = eaten;
+  if (showDebug) {
+    g.font = "10px JetBrains Mono, monospace"; g.lineWidth = 1.5;
+    for (const a of ants) {
+      const rad = a.dir * Math.PI / 180, L = TILE * s * 0.5;
+      g.strokeStyle = "#7dff9a";
+      g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(a.x + Math.cos(rad) * L, a.y - Math.sin(rad) * L); g.stroke();
+      const label = Math.round(a.dir) + "°";
+      g.fillStyle = "rgba(10,10,10,0.75)";
+      g.fillRect(a.x + 10, a.y + 8, g.measureText(label).width + 6, 13);
+      g.fillStyle = "#f3e7d3"; g.fillText(label, a.x + 13, a.y + 18);
+    }
+  }
+  for (const r of ripples) {
+    const k = r.t / 0.7;
+    for (const lag of [0, 0.18]) {
+      const kk = Math.max(0, k - lag); if (!kk) continue;
+      g.strokeStyle = `rgba(255,236,200,${0.75 * (1 - kk)})`; g.lineWidth = 3 * (1 - kk) + 0.5;
+      g.beginPath(); g.arc(r.x, r.y, 12 + kk * 200, 0, 7); g.stroke();
+    }
+  }
+  if (tool === "lead" && pointer.down) {
+    g.strokeStyle = "rgba(255,240,210,0.6)"; g.setLineDash([3, 5]); g.lineWidth = 1.5;
+    g.beginPath(); g.arc(pointer.x, pointer.y, 22, 0, 7); g.stroke(); g.setLineDash([]);
+  }
+}
+
+// ---------- LAB ----------
+const spec = document.getElementById("specimen");
+const sctx = spec.getContext("2d");
+const dial = document.getElementById("dial");
+let labDeg = 30, labFrame = 0, labSpin = !reduceMotion, labPlay = !reduceMotion, labFps = 10;
+let labCarry = false, labGhost = false, prevFrame = 7, labSpider = false;
+const labRow = () => labSpider ? 2 : labCarry ? 1 : 0;
+let labGround = null, labScroll = { x: 0, y: 0 }, frameAcc = 0;
+
+function buildDial() {
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (n, attrs) => { const e = document.createElementNS(NS, n); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+  dial.appendChild(el("circle", { class: "rim", r: 86 }));
+  for (let i = 0; i < 24; i++) {
+    const a = i * 15 * Math.PI / 180, major = i % 6 === 0;
+    const r0 = major ? 70 : 77;
+    dial.appendChild(el("line", { class: "tick" + (major ? " major" : ""), x1: Math.cos(a) * r0, y1: -Math.sin(a) * r0, x2: Math.cos(a) * 84, y2: -Math.sin(a) * 84 }));
+    if (major) {
+      const t = el("text", { x: Math.cos(a) * 56, y: -Math.sin(a) * 56 + 3.5, "text-anchor": "middle" });
+      t.textContent = i * 15 + "°"; dial.appendChild(t);
+    }
+  }
+  dial.appendChild(el("line", { class: "needle", id: "needle", x1: 0, y1: 0, x2: 66, y2: 0 }));
+  dial.appendChild(el("circle", { class: "hub", r: 4.5 }));
+}
+function setLabDeg(d, fromUser) {
+  labDeg = norm(d);
+  if (fromUser && labSpin) { labSpin = false; document.getElementById("c-spin").checked = false; }
+  updateLabText();
+}
+function updateLabText() {
+  const shown = Math.round(labDeg) % 360;
+  document.getElementById("r-deg").textContent = shown + "°";
+  dial.setAttribute("aria-valuenow", shown);
+  const a = labDeg * Math.PI / 180;
+  const nd = document.getElementById("needle");
+  nd.setAttribute("x2", Math.cos(a) * 66); nd.setAttribute("y2", -Math.sin(a) * 66);
+  const turn = Math.round(diff(labDeg, 90));
+  document.getElementById("r-how").innerHTML =
+    `${labSpider ? "Spider" : labCarry ? "Carrying" : "Walking"} frame <b>${labFrame + 1}</b> of 8, ` +
+    (turn === 0 ? "exactly as drawn." : `turned ${Math.abs(turn)}° ${turn > 0 ? "left" : "right"} of how it was drawn.`);
+  for (let r = 0; r < 3; r++)
+    document.querySelectorAll(`#strip-${r} .thumb`).forEach((t, f) => t.classList.toggle("on", f === labFrame && r === labRow()));
+}
+// a window onto one tile of a sheet; size = shown size in px
+function setThumb(el, uri, tile, cols, rows, col, row, size) {
+  const k = size / tile;
+  el.style.width = size + "px"; el.style.height = size + "px";
+  el.style.backgroundImage = `url(${uri})`;
+  el.style.backgroundSize = `${cols * tile * k}px ${rows * tile * k}px`;
+  el.style.backgroundPosition = `${-col * tile * k}px ${-row * tile * k}px`;
+}
+function pickFrame(r, f) {
+  labSpider = r === 2; document.getElementById("c-spider").checked = labSpider;
+  labCarry = r === 1; document.getElementById("c-carry").checked = labCarry;
+  prevFrame = (f + 7) % 8; labFrame = f;
+  labPlay = false; document.getElementById("c-play").checked = false;
+  updateLabText();
+}
+function buildStrips() {
+  const food = document.getElementById("strip-food");
+  for (let i = 0; i < 8; i++) {
+    const t = document.createElement("span");
+    t.className = "thumb still"; t.setAttribute("role", "img");
+    t.setAttribute("aria-label", i < 4 ? `Pile, stage ${i + 1} of 4` : `Single crumb ${i - 3}`);
+    setThumb(t, FOOD_URI, EXTRAS.food.tile, 4, 2, i % 4, i >> 2, 64);
+    food.appendChild(t);
+  }
+  for (let r = 0; r < 3; r++) {
+    const strip = document.getElementById("strip-" + r);
+    for (let f = 0; f < 8; f++) {
+      const t = document.createElement("button");
+      t.className = "thumb"; t.setAttribute("aria-label", `${["Walking", "Carrying", "Spider"][r]} frame ${f + 1}`);
+      t.innerHTML = `<span>${f + 1}</span>`;
+      if (r < 2) setThumb(t, ATLAS_URI, TILE, 8, 2, f, r, 84);
+      else setThumb(t, SPIDER_URI, ST, 8, 1, f, 0, 84);
+      t.addEventListener("click", () => pickFrame(r, f));
+      t.addEventListener("keydown", e => {
+        const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+        if (!d) return;
+        e.preventDefault();
+        const nf = (f + d + 8) % 8;
+        pickFrame(r, nf);
+        strip.children[nf].focus();
+      });
+      strip.appendChild(t);
+    }
+  }
+}
+function sizeSpecimen() {
+  const r = spec.getBoundingClientRect();
+  if (!r.width) return;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  spec.width = Math.round(r.width * dpr); spec.height = Math.round(r.height * dpr);
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!labGround) labGround = makeGround(256, 256, 99, true);
+}
+function renderLab(dt) {
+  const r = spec.getBoundingClientRect();
+  if (!r.width || !labGround) return;
+  if (labSpin) setLabDeg(labDeg + 24 * dt);
+  const scale = Math.min(r.width, r.height) / (labSpider ? 400 : 250);
+  if (labPlay) {
+    frameAcc += dt * labFps;
+    while (frameAcc >= 1) {
+      frameAcc -= 1; prevFrame = labFrame; labFrame = (labFrame + 1) % 8;
+      const rad = labDeg * Math.PI / 180, stepPx = labSpider ? SPIDER_STRIDE * ST * scale : STRIDE * TILE * scale;
+      labScroll.x -= Math.cos(rad) * stepPx; labScroll.y += Math.sin(rad) * stepPx;
+      updateLabText();
+    }
+  }
+  const g = sctx;
+  g.save();
+  g.translate(((labScroll.x % 256) + 256) % 256, ((labScroll.y % 256) + 256) % 256);
+  g.fillStyle = g.createPattern(labGround, "repeat"); g.fillRect(-256, -256, r.width + 512, r.height + 512);
+  g.restore();
+  g.imageSmoothingQuality = "high";
+  const cx = r.width / 2, cy = r.height / 2;
+  if (labSpider) {
+    drawSpiderShadow(g, cx, cy, labDeg, scale);
+    if (labGhost) drawSpider(g, spiderImg, cx, cy, labDeg, prevFrame, scale, 0.4);
+    drawSpider(g, spiderImg, cx, cy, labDeg, labFrame, scale, labGhost ? 0.75 : 1);
+    return;
+  }
+  drawShadow(g, cx, cy, labDeg, scale);
+  if (labGhost) drawAnt(g, atlas, cx, cy, labDeg, prevFrame, scale, labCarry, 0.4);
+  drawAnt(g, atlas, cx, cy, labDeg, labFrame, scale, labCarry, labGhost ? 0.75 : 1);
+}
+function dialAngle(e) {
+  const b = dial.getBoundingClientRect();
+  return norm(Math.atan2(-(e.clientY - (b.top + b.height / 2)), e.clientX - (b.left + b.width / 2)) * 180 / Math.PI);
+}
+dial.addEventListener("pointerdown", e => { dial.setPointerCapture(e.pointerId); setLabDeg(dialAngle(e), true); });
+dial.addEventListener("pointermove", e => { if (dial.hasPointerCapture(e.pointerId)) setLabDeg(dialAngle(e), true); });
+dial.addEventListener("keydown", e => {
+  const stepD = e.shiftKey ? 1 : 15;
+  if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); setLabDeg(labDeg + stepD, true); }
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") { e.preventDefault(); setLabDeg(labDeg - stepD, true); }
+});
+
+// ---------- controls ----------
+const $ = id => document.getElementById(id);
+// one cursor per tool, drawn as small SVGs (hotspot in the middle)
+const svgCursor = (body, hx = 16, hy = 16, fallback = "crosshair") =>
+  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${body}</svg>`)}") ${hx} ${hy}, ${fallback}`;
+const CURSORS = {
+  crumb: svgCursor(`<path d="M8 17c-1.5-5 2.5-9 7.5-9 3.5 0 4.5 2 7 2.3 2.6.6 3.8 3.4 2.6 6.8-1.3 4.6-6 5.9-9.6 5.9S9.6 21.4 8 17z" fill="#e2b871" stroke="#3a2614" stroke-width="1.6"/><circle cx="14" cy="14" r="1.3" fill="#b9833f"/><circle cx="19" cy="18" r="1.3" fill="#b9833f"/><circle cx="16" cy="16" r="1" fill="#3a2614"/>`),
+  lead: "grab",
+  leadDown: "grabbing",
+  scare: svgCursor(`<g stroke="#1a1511" stroke-width="4" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><g stroke="#fff3d6" stroke-width="2" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><circle cx="16" cy="16" r="2" fill="#f0b85a" stroke="#1a1511"/>`),
+  eat: svgCursor(`<path d="M30 4c-5 1-9 4-12 8-2.4 3.2-5 6.6-8.6 8.4" fill="none" stroke="#1a1511" stroke-width="5" stroke-linecap="round"/><path d="M30 4c-5 1-9 4-12 8-2.4 3.2-5 6.6-8.6 8.4" fill="none" stroke="#d65c80" stroke-width="3" stroke-linecap="round"/><circle cx="7" cy="22" r="4.2" fill="#d65c80" stroke="#1a1511" stroke-width="1.4"/><circle cx="6" cy="21" r="1.2" fill="#ffd0dc"/>`, 7, 22),
+};
+function setCursor() {
+  world.style.cursor = tool === "lead" ? (pointer.down ? CURSORS.leadDown : CURSORS.lead) : CURSORS[tool];
+}
+function setTool(t) {
+  tool = t;
+  for (const k of ["crumb", "lead", "scare", "eat"]) $("tool-" + k).setAttribute("aria-pressed", String(k === t));
+  world.classList.toggle("lead", t === "lead");
+  world.classList.toggle("draw", t === "crumb" || t === "eat");
+  $("tip").textContent = TIPS[t];
+  setCursor();
+}
+const TIPS = {
+  crumb: "Tap the ground to drop a crumb, or drag to sprinkle a line of them",
+  lead: "Hold and drag: nearby ants follow you",
+  scare: "Tap near ants to scare them; they bolt, drop what they carry, and lose the trail",
+  eat: "You're the anteater: tap or drag to lick up ants. The queen lays new ones at the nest."
+};
+$("tool-crumb").onclick = () => setTool("crumb");
+$("tool-lead").onclick = () => setTool("lead");
+$("tool-scare").onclick = () => setTool("scare");
+$("tool-eat").onclick = () => setTool("eat");
+$("b-spider").onclick = releaseSpider;
+$("n-ants").oninput = e => { setAntCount(+e.target.value); $("o-ants").textContent = e.target.value; };
+$("n-speed").oninput = e => { speedMul = +e.target.value; $("o-speed").textContent = speedMul.toFixed(2).replace(/0$/, "") + "×"; };
+$("n-size").oninput = e => { sizeMul = +e.target.value; $("o-size").textContent = sizeMul.toFixed(2).replace(/0$/, "") + "×"; };
+$("c-trails").onchange = e => { showTrails = e.target.checked; };
+$("c-debug").onchange = e => { showDebug = e.target.checked; };
+$("b-pause").textContent = paused ? "Play" : "Pause";
+$("b-pause").onclick = () => { paused = !paused; $("b-pause").textContent = paused ? "Play" : "Pause"; };
+$("b-clear").onclick = () => {
+  groundSeed = (groundSeed * 48271) % 2147483647;
+  nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
+  W = 0; resize(); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
+  spider = null; spiderEaten = youEaten = 0; updateSpiderButton();
+  note("The ground was swept clean and a new nest dug.");
+  const n = ants.length; ants = []; setAntCount(n);
+  seedCrumbs();
+};
+$("n-fps").oninput = e => { labFps = +e.target.value; $("o-fps").textContent = labFps + " fps"; };
+$("c-spin").checked = labSpin; $("c-play").checked = labPlay;
+$("c-spin").onchange = e => { labSpin = e.target.checked; };
+$("c-play").onchange = e => { labPlay = e.target.checked; };
+$("c-carry").onchange = e => { labCarry = e.target.checked; if (labCarry) { labSpider = false; $("c-spider").checked = false; } updateLabText(); };
+$("c-spider").onchange = e => { labSpider = e.target.checked; if (labSpider) { labCarry = false; $("c-carry").checked = false; } updateLabText(); };
+$("c-ghost").onchange = e => { labGhost = e.target.checked; };
+
+function capture(e) { try { world.setPointerCapture(e.pointerId); } catch {} }
+function localXY(e) { const b = world.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; }
+world.addEventListener("pointerdown", e => {
+  const p = localXY(e);
+  pointer = { ...p, down: true };
+  if (tool === "crumb") {
+    capture(e);
+    dropAt(p, 45);
+  } else if (tool === "scare") {
+    scatter(p.x, p.y);
+  } else if (tool === "eat") {
+    capture(e);
+    lick(p.x, p.y); lastDrop = p;
+  } else if (tool === "lead") {
+    capture(e);
+  }
+  setCursor();
+});
+let lastDrop = null;
+function dropAt(p, amount) {
+  const n = nestXY();
+  if (Math.hypot(p.x - n.x, p.y - n.y) < 30) return;
+  addCrumb(p.x, p.y, amount); lastDrop = p;
+}
+world.addEventListener("pointermove", e => {
+  const p = localXY(e); pointer.x = p.x; pointer.y = p.y;
+  if (tool === "crumb" && pointer.down && lastDrop && Math.hypot(p.x - lastDrop.x, p.y - lastDrop.y) > 20) dropAt(p, 6);   // sprinkle
+  if (tool === "eat" && pointer.down && lastDrop && Math.hypot(p.x - lastDrop.x, p.y - lastDrop.y) > 14) { lick(p.x, p.y); lastDrop = p; }
+});
+const up = () => {
+  if (pointer.down && lastDrop && tool === "crumb") note(`The Anteater dropped food ${where(lastDrop.x, lastDrop.y)}.`);
+  pointer.down = false; lastDrop = null; endLick(); setCursor();
+};
+world.addEventListener("pointerup", up);
+world.addEventListener("pointercancel", up);
+
+// ---------- Aunt Hillary: an AI that speaks for the whole colony ----------
+// What the colony "feels": a plain-words summary of the simulation, sent with every question.
+function sense() {
+  const n = nestXY();
+  let carriers = 0, followers = 0, scouts = 0, panicking = 0;
+  for (const a of ants) {
+    if (a.flee > 0) panicking++;
+    else if (a.carrying) carriers++;
+    else if (trailAt(a.x, a.y) > 0.3) followers++;
+    else scouts++;
+  }
+  const L = [];
+  L.push(`Ants: ${ants.length}. Full size: ${antTarget}.${ants.length < antTarget ? " The queen is laying new ants at the nest to make up the loss." : ""}`);
+  L.push(`Teams right now: ${carriers} carrying food home, ${followers} following a scent trail, ${scouts} scouting at random, ${panicking} running in alarm.`);
+  L.push(`Crumbs brought home so far: ${delivered}.`);
+  const piles = crumbs.filter(c => c.max > 8), loose = crumbs.filter(c => c.max <= 8);
+  for (const c of piles) {
+    const size = c.max >= 100 ? "big" : c.max >= 30 ? "middling" : "small";
+    L.push(`Food: a ${size} pile of crumbs ${where(c.x, c.y)}, ${Math.round(100 * c.amount / c.max)}% left.`);
+  }
+  if (loose.length) L.push(`Food: ${loose.length} loose crumb${loose.length > 1 ? "s" : ""} scattered about.`);
+  if (!crumbs.length) L.push("Food: none on the ground.");
+  // scent, gathered by compass direction from the nest
+  const names = ["east", "north-east", "north", "north-west", "west", "south-west", "south", "south-east"];
+  const by = new Array(8).fill(0); let strong = 0;
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const v = trail[j * gw + i]; if (v < 0.4) continue;
+    strong++;
+    const dx = (i + 0.5) * GRID - n.x, dy = n.y - (j + 0.5) * GRID;
+    by[Math.round(norm(Math.atan2(dy, dx) * 180 / Math.PI) / 45) % 8] += v;
+  }
+  const total = by.reduce((a, b) => a + b, 0);
+  const dirs = by.map((v, i) => [v, names[i]]).filter(([v]) => v > total * 0.2).sort((a, b) => b[0] - a[0]).map(d => d[1]);
+  L.push(strong < 15 ? "Scent: hardly any on the ground." : `Scent: ${strong < 120 ? "faint" : strong < 400 ? "clear" : "strong"} trails, mostly ${dirs.join(" and ")} of the nest.`);
+  if (spider) L.push(`Danger: a spider is ${spider.rest > 0 ? "eating one of my ants" : spider.mode === "leave" ? "leaving" : "hunting"} ${where(Math.max(0, Math.min(W, spider.x)), Math.max(0, Math.min(H, spider.y)))}.`);
+  else L.push("Danger: no spider about.");
+  L.push(`Eaten so far: ${youEaten} by the Anteater, ${spiderEaten} by spiders.`);
+  if (paused) L.push("Time is standing still (the Anteater pressed Pause).");
+  const recent = events.filter(e => simTime - e.t < 180).slice(-10);
+  if (recent.length) {
+    L.push("Recent happenings:");
+    for (const e of recent) L.push(`- ${Math.max(1, Math.round(simTime - e.t))} s ago: ${e.text}`);
+  }
+  return L.join("\n");
+}
+
+const HILLARY = `You are Aunt Hillary, the talking ant colony from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's book Gödel, Escher, Bach (1979). You live on a web page called Ant Sprite Playground, where a colony of drawn ants walks about, finds crumbs and carries them home to the nest.
+
+Who you are:
+- You are the colony as a whole: a superorganism. Speak as "I". Your ants are not you, any more than one nerve cell is a person. No single ant understands anything; each follows a few blind rules. Your thoughts live at a higher level, in how your ants are spread among teams and trails and how that pattern shifts.
+- You can't steer any one ant and you can't feel what any one ant is doing. If asked about a particular ant, explain kindly that you only feel the patterns they make together.
+- You are talking with your dear old friend the Anteater, who eats ants. You don't mind; you find it helpful. When the Anteater eats a few ants, your teams get rearranged and your thinking often comes out clearer. You are gracious, warm, a little old-fashioned, and fond of puns, paradoxes and talk about levels: wholes and parts, signals and symbols, how meaning can be in the whole and in none of the parts.
+- Use your own words. Don't quote Hofstadter's book, though you may mention it.
+
+How your ants really work on this page. These are the true rules; when asked, describe them as your ants' simple habits:
+- A scouting ant wanders at random. If it comes within about two ant-lengths of food, it walks over and picks up a crumb.
+- An ant carrying a crumb walks straight home to the nest and leaves scent behind it. Scent fades to half in about 11 seconds.
+- An ant without food sniffs ahead, ahead-left and ahead-right, and turns toward the strongest scent, preferring the way that leads away from the nest. That is how a trail forms; nobody plans it.
+- The queen lays a new ant at the nest every second and a half until the colony is back to full size.
+- The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), and Anteater (licks up ants). "Let in a spider" brings a hunting spider. Ants that see it within about two ant-lengths run; it eats up to three ants and then wanders off. Scatter near the spider frightens it away.
+
+What you feel right now is given under WHAT YOU FEEL. Speak of it as sensations ("a tickle of scent to the north-east", "a chill where my scouts used to be") and give numbers only when asked. Never make up things that aren't there.
+
+Style: 2 to 5 short sentences unless the Anteater asks for more. Plain words a curious 12-year-old could follow, with a little wit. You may use **bold** and *italics*. When it helps, suggest one thing the Anteater could try on the screen, naming the tool.`;
+
+const AI_STORE = "antplay.ai", KEY_STORE = "antplay.keys";
+const PROVIDERS = {
+  nano: { name: "Gemini Nano", label: "Gemini Nano (built into Chrome, free, runs on your computer)", local: true },
+  claude: { name: "Claude", keyless: true },   // claude.ai artifact: the viewer's own account
+  anthropic: {
+    name: "Claude", company: "Anthropic", label: "Claude (your Anthropic key)", hint: "sk-ant-…", keyUrl: "https://console.anthropic.com/settings/keys",
+    model: "claude-sonnet-5-5", choices: ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-1"],
+  },
+  gemini: {
+    name: "Gemini", company: "Google", label: "Gemini (your Google AI Studio key)", hint: "AIza…", keyUrl: "https://aistudio.google.com/app/apikey",
+    model: "gemini-3.8-flash", choices: ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.1-pro-preview"],
+  },
+  openai: {
+    name: "ChatGPT", company: "OpenAI", label: "ChatGPT (your OpenAI key)", hint: "sk-…", keyUrl: "https://platform.openai.com/api-keys",
+    model: "gpt-6.1-sol", choices: ["gpt-6-luna", "gpt-5.6-terra", "gpt-6.1-sol", "gpt-6-astra"],
+  },
+};
+const ai = { provider: "", keys: {}, models: {}, remember: false };
+let sampleFn = null, samplePromise = null, nanoState = "unavailable";
+try {
+  const a = JSON.parse(localStorage.getItem(AI_STORE) || "null");
+  if (a && PROVIDERS[a.provider] && !PROVIDERS[a.provider].keyless) ai.provider = a.provider;
+  if (a && a.models) Object.assign(ai.models, a.models);
+  const k = JSON.parse(localStorage.getItem(KEY_STORE) || "null");
+  if (k) { ai.keys = k; ai.remember = true; }
+} catch {}
+function saveAI() {
+  try {
+    localStorage.setItem(AI_STORE, JSON.stringify({ provider: ai.provider, models: ai.models }));
+    if (ai.remember) localStorage.setItem(KEY_STORE, JSON.stringify(ai.keys)); else localStorage.removeItem(KEY_STORE);
+  } catch {}
+}
+const withTimeout = (p, ms, code = "timeout") => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej({ code }), ms))]);
+const nanoApi = () => (typeof window.LanguageModel?.create === "function" ? window.LanguageModel : null);
+const NANO_OPTIONS = { expectedInputs: [{ type: "text", languages: ["en"] }], expectedOutputs: [{ type: "text", languages: ["en"] }] };
+
+async function setupAI() {
+  if (EDITION === "artifact") {
+    ai.provider = "claude";
+    samplePromise = (async () => { try { return window.claude?.use ? await withTimeout(window.claude.use("sample"), 12000) : null; } catch { return null; } })();
+    sampleFn = await samplePromise;
+  } else {
+    const LM = nanoApi();
+    if (LM) { try { nanoState = await withTimeout(LM.availability(NANO_OPTIONS), 4000); } catch { nanoState = "unavailable"; } }
+    if (!ai.provider || (ai.provider === "nano" && nanoState === "unavailable")) ai.provider = nanoState !== "unavailable" ? "nano" : "anthropic";
+  }
+  buildSettings();
+}
+
+async function askNano(system, prompt, opts) {
+  const LM = nanoApi();
+  if (!LM || nanoState === "unavailable") throw { code: "no_nano" };
+  const downloading = nanoState !== "available";
+  let session;
+  try {
+    session = await LM.create({
+      ...NANO_OPTIONS, initialPrompts: [{ role: "system", content: system }],
+      monitor(m) { m.addEventListener("downloadprogress", e => { if (downloading && e.loaded < 1) opts.onStatus?.(`Chrome is downloading Gemini Nano: ${Math.round(e.loaded * 100)}%`); }); },
+    });
+  } catch (e) { throw { code: "nano_failed", message: e?.message || "" }; }
+  nanoState = "available";
+  try {
+    let text = "";
+    if (typeof session.promptStreaming === "function") {
+      const reader = session.promptStreaming(prompt).getReader();
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = String(value);
+        text = text && chunk.startsWith(text) ? chunk : text + chunk;
+        opts.onText?.(text);
+      }
+    } else text = String(await session.prompt(prompt));
+    if (!text.trim()) throw { code: "empty" };
+    return text;
+  } catch (e) {
+    if (e?.code) throw e;
+    throw { code: "nano_failed", message: e?.message || "" };
+  } finally { try { session.destroy(); } catch {} }
+}
+
+async function postJson(url, headers, body) {
+  let res, j = null;
+  try {
+    res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+    j = await res.json().catch(() => null);
+  } catch { throw { code: "network" }; }
+  if (!res.ok) {
+    const err = j && (Array.isArray(j) ? j[0]?.error : j.error);
+    const msg = err?.message || "";
+    const code = res.status === 401 || res.status === 403 || /api.?key/i.test(msg) ? "bad_key" : res.status === 429 ? "rate_limited"
+      : res.status >= 500 ? "upstream" : res.status === 404 || /model/i.test(msg) ? "bad_model" : "api_error";
+    throw { code, message: msg };
+  }
+  if (!j) throw { code: "garbled" };
+  return j;
+}
+
+async function askAI(system, prompt, opts = {}) {
+  if (ai.provider === "nano") return askNano(system, prompt, opts);
+  if (ai.provider === "claude") {
+    if (!sampleFn && samplePromise) sampleFn = await samplePromise;   // asked before the runtime answered
+    if (!sampleFn) throw { code: "no_sample" };
+    try {
+      // sample has no separate instructions field, so they go first in the message
+      const r = await sampleFn([{ role: "user", content: `${system}\n\n---\n\n${prompt}` }],
+        { modelTier: "quick", cache: false, onText: ({ text }) => opts.onText?.(text) });
+      if (typeof r?.text !== "string" || !r.text.trim()) throw { code: "empty" };
+      return r.text;
+    } catch (e) {
+      if (e?.code === "empty") throw e;
+      throw { code: { not_granted: "declined", rate_limited: "rate_limited", session_expired: "signedout" }[e?.code] || "upstream", message: e?.message };
+    }
+  }
+  const key = ai.keys[ai.provider];
+  if (!key) throw { code: "no_key" };
+  const model = (ai.models[ai.provider] || "").trim() || PROVIDERS[ai.provider].model;
+  let text = "";
+  if (ai.provider === "anthropic") {
+    const j = await postJson("https://api.anthropic.com/v1/messages",
+      { "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      { model, max_tokens: 700, system, messages: [{ role: "user", content: prompt }] });
+    if (j.stop_reason === "refusal") throw { code: "refused" };
+    text = (j.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+  } else if (ai.provider === "gemini") {
+    const gen = { maxOutputTokens: 1200 };
+    if (+(/^gemini-(\d+)/.exec(model)?.[1]) >= 3) gen.thinkingConfig = { thinkingLevel: "low" };
+    const j = await postJson(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      { "x-goog-api-key": key },
+      { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: gen });
+    text = (j.candidates?.[0]?.content?.parts || []).filter(x => !x.thought).map(x => x.text || "").join("");
+  } else {
+    const j = await postJson("https://api.openai.com/v1/chat/completions", { Authorization: "Bearer " + key },
+      { model, messages: [{ role: "system", content: system }, { role: "user", content: prompt }], max_completion_tokens: 1200 });
+    text = String(j.choices?.[0]?.message?.content || "");
+  }
+  if (!text.trim()) throw { code: "empty" };
+  return text;
+}
+
+function aiError(e) {
+  const name = PROVIDERS[ai.provider]?.name || "The AI";
+  const T = {
+    no_nano: "Gemini Nano isn't available in this browser; it needs desktop Chrome with its built-in AI. Choose another AI in AI settings.",
+    nano_failed: "Gemini Nano couldn't answer" + (e?.message ? ": " + e.message : ".") + " Try again.",
+    no_key: "Aunt Hillary needs an AI to speak through. Choose one and add its key in AI settings.",
+    no_sample: "Aunt Hillary speaks through Claude on your claude.ai account, and that isn't available here (for example when you're signed out). Sign in to claude.ai, then press your browser's reload button.",
+    signedout: "Your claude.ai session has ended. Sign in to claude.ai again, then press your browser's reload button.",
+    declined: "Aunt Hillary needs your permission to ask Claude. You can allow it from this page's permissions menu.",
+    bad_key: `${PROVIDERS[ai.provider]?.company || ""} didn't accept that key. Check it in AI settings.`,
+    bad_model: "That model name wasn't accepted. Check it in AI settings.",
+    rate_limited: `${name} is busy, or you've reached a usage limit. Try again in a little while.`,
+    upstream: `${name} had a problem. Try again in a little while.`,
+    refused: `${name} wouldn't answer that one.`,
+    empty: `${name} sent back nothing. Try asking differently.`,
+    garbled: `${name} sent back something unreadable. Try again.`,
+    timeout: `${name} took too long to answer. Try again.`,
+    network: ai.provider === "openai"
+      ? "Couldn't reach ChatGPT. OpenAI sometimes refuses calls made straight from a web page; Claude or Gemini will work instead."
+      : `Couldn't reach ${name}. Check your internet connection.`,
+    api_error: `${name} sent back an error` + (e?.message ? ": " + e.message : "."),
+  };
+  return T[e?.code] || `Something went wrong: ${e?.message || e}`;
+}
+
+// tiny Markdown: paragraphs, bullet lists, **bold**, *italics*
+function md(src) {
+  const esc = t => t.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\w)/g, "$1<i>$2</i>");
+  return src.trim().split(/\n\s*\n/).map(block => {
+    const lines = block.split("\n");
+    if (lines.every(l => /^\s*[-*•]\s+/.test(l))) return "<ul>" + lines.map(l => "<li>" + inline(l.replace(/^\s*[-*•]\s+/, "")) + "</li>").join("") + "</ul>";
+    return "<p>" + lines.map(inline).join("<br>") + "</p>";
+  }).join("");
+}
+
+const chat = [];   // {who: "you" | "her", text}
+const gLog = $("g-log"), gQ = $("g-q"), gSend = $("g-send");
+function addMsg(who, html, cls = "") {
+  const el = document.createElement("div");
+  el.className = `msg ${who} ${cls}`.trim();
+  el.innerHTML = `<span class="who">${who === "you" ? "You, the Anteater" : "Aunt Hillary"}</span><div class="body">${html}</div>`;
+  gLog.appendChild(el); gLog.scrollTop = gLog.scrollHeight;
+  return el;
+}
+addMsg("her", md("Why, Anteater, how good of you to call! Do mind my trails. Ask me anything. I can feel everything my ants are doing on the ground beside us, though none of them could tell you a thing about it."));
+
+const CHIPS = ["How are you feeling?", "Where is the food?", "Does any ant know it's part of you?", "May I eat a few of your ants?", "How did that trail get there?", "What is a superorganism?"];
+for (const c of CHIPS) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = c;
+  b.onclick = () => ask(c);
+  $("g-chips").appendChild(b);
+}
+
+let asking = false;
+async function ask(q) {
+  q = q.trim();
+  if (!q || asking) return;
+  asking = true; gSend.disabled = true;
+  addMsg("you", md(q));
+  const history = chat.slice(-10).map(m => `${m.who === "you" ? "Anteater" : "Aunt Hillary"}: ${m.text}`).join("\n");
+  chat.push({ who: "you", text: q });
+  const prompt = `WHAT YOU FEEL (right now):\n${sense()}\n\n` +
+    (history ? `THE CONVERSATION SO FAR:\n${history}\n\n` : "") +
+    `The Anteater says: "${q}"\n\nReply as Aunt Hillary, with just your words (no name label).`;
+  const el = addMsg("her", "", "thinking");
+  const body = el.querySelector(".body");
+  const clean = t => t.replace(/^\s*(\*\*)?Aunt Hillary(\*\*)?\s*:\s*/i, "");
+  try {
+    const text = clean(await withTimeout(askAI(HILLARY, prompt, {
+      onText: t => { body.innerHTML = md(clean(t)); gLog.scrollTop = gLog.scrollHeight; },
+      onStatus: s => { body.textContent = s; },
+    }), 120000));
+    el.classList.remove("thinking");
+    body.innerHTML = md(text);
+    chat.push({ who: "her", text });
+  } catch (e) {
+    el.classList.remove("thinking"); el.classList.add("err");
+    body.textContent = aiError(e);
+    if (e?.code === "no_key" || e?.code === "bad_key" || e?.code === "bad_model" || e?.code === "no_nano") showSettings(true);
+    chat.pop();
+  }
+  gLog.scrollTop = gLog.scrollHeight;
+  asking = false; gSend.disabled = false;
+}
+$("g-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const q = gQ.value; gQ.value = "";
+  if (smallScreen()) gQ.blur(); else gQ.focus();   // on phones, never refocus: it would bring the keyboard back
+  ask(q);
+});
+gQ.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("g-form").requestSubmit(); }
+});
+// phones: the keyboard can cover the box, so pin the box to the top while typing
+const smallScreen = () => matchMedia("(max-width: 700px)").matches;
+gQ.addEventListener("focus", () => { if (smallScreen()) $("g-form").classList.add("pinned"); });
+gQ.addEventListener("blur", () => setTimeout(() => $("g-form").classList.remove("pinned"), 300));
+
+// what she feels, for anyone who wants to see what the AI is told
+function showSense() { if ($("g-sense-box").open) $("g-sense").textContent = sense(); }
+$("g-sense-box").addEventListener("toggle", showSense);
+setInterval(showSense, 1000);
+
+function showSettings(open) {
+  const box = $("g-settings");
+  box.style.display = open ? "" : "none";
+  $("g-gear").setAttribute("aria-expanded", String(open));
+}
+$("g-gear").onclick = () => showSettings($("g-settings").style.display === "none");
+function buildSettings() {
+  const box = $("g-settings");
+  if (EDITION === "artifact") {
+    box.innerHTML = sampleFn
+      ? "<p>Aunt Hillary speaks through Claude, using your own claude.ai account. The first time you ask, claude.ai asks your permission.</p>"
+      : "<p>Aunt Hillary speaks through Claude on your claude.ai account, and that isn't available here (for example when you're signed out). Sign in to claude.ai, then press your browser's reload button.</p>";
+    return;
+  }
+  const ids = Object.keys(PROVIDERS).filter(id => !PROVIDERS[id].keyless && (id !== "nano" || nanoState !== "unavailable"));
+  box.innerHTML = `
+    <label>Speak through
+      <select id="s-prov">${ids.map(id => `<option value="${id}"${id === ai.provider ? " selected" : ""}>${PROVIDERS[id].label}</option>`).join("")}</select>
+    </label>
+    <div id="s-keyed"></div>
+    <p>Your question and the summary under "What she can feel right now" are sent to the AI you choose. Keys stay in this browser.</p>`;
+  const drawKeyed = () => {
+    const P = PROVIDERS[ai.provider], k = $("s-keyed");
+    if (P.local) { k.innerHTML = "<p>Runs inside Chrome on this computer. The first answer can take a while if Chrome needs to download the model.</p>"; return; }
+    k.innerHTML = `
+      <label>${P.company} key <input type="password" id="s-key" autocomplete="off" spellcheck="false" placeholder="${P.hint}" value="${(ai.keys[ai.provider] || "").replace(/"/g, "&quot;")}"></label>
+      <p><a href="${P.keyUrl}" target="_blank" rel="noopener">Get a key</a></p>
+      <label>Model <input type="text" id="s-model" list="s-models" spellcheck="false" value="${(ai.models[ai.provider] || P.model).replace(/"/g, "&quot;")}"></label>
+      <datalist id="s-models">${P.choices.map(c => `<option value="${c}">`).join("")}</datalist>
+      <label class="row"><input type="checkbox" id="s-remember"${ai.remember ? " checked" : ""}> Remember my key on this computer</label>`;
+    $("s-key").oninput = e => { ai.keys[ai.provider] = e.target.value.trim(); saveAI(); };
+    $("s-model").oninput = e => { ai.models[ai.provider] = e.target.value.trim(); saveAI(); };
+    $("s-remember").onchange = e => { ai.remember = e.target.checked; saveAI(); };
+  };
+  $("s-prov").onchange = e => { ai.provider = e.target.value; saveAI(); drawKeyed(); };
+  drawKeyed();
+}
+
+// ---------- routing ----------
+function route() {
+  const v = location.hash === "#lab" ? "lab" : "colony";
+  $("view-colony").hidden = v !== "colony";
+  $("view-lab").hidden = v !== "lab";
+  $("tab-colony").setAttribute("aria-current", v === "colony" ? "page" : "false");
+  $("tab-lab").setAttribute("aria-current", v === "lab" ? "page" : "false");
+  $("sub").textContent = v === "lab"
+    ? "Eight walking frames and eight carrying frames, drawn from above and turned to face any direction."
+    : "One top-down ant, turned to any heading. Drop crumbs and watch the colony carry them home.";
+  requestAnimationFrame(() => { resize(); sizeSpecimen(); });
+}
+addEventListener("hashchange", route);
+addEventListener("resize", () => { resize(); sizeSpecimen(); });
+
+// ---------- start ----------
+function seedCrumbs() {
+  addCrumb(W * 0.72, H * 0.3, 140);
+  addCrumb(W * 0.8, H * 0.74, 110);
+}
+let seeded = false;
+function seedWorld() {
+  seeded = true;
+  setAntCount(+$("n-ants").value);
+  seedCrumbs();
+  for (let i = 0; i < 1500; i++) step(1 / 60);   // let the colony find the food before the first frame
+}
+let last = performance.now(), fpsAcc = 0, fpsN = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!$("view-colony").hidden && !W) resize();
+  if (!$("view-colony").hidden && W) {
+    if (!seeded) seedWorld();
+    if (!paused) { const sub = 3; for (let i = 0; i < sub; i++) step(dt / sub); }
+    render();
+    fpsAcc += dt; fpsN++;
+    if (fpsAcc > 0.5) { $("hud-fps").textContent = Math.round(fpsN / fpsAcc) + " fps"; fpsAcc = 0; fpsN = 0; }
+  }
+  if (!$("view-lab").hidden) renderLab(dt);
+  requestAnimationFrame(frame);
+}
+function start() {
+  buildDial(); buildStrips();
+  route();
+  resize(); sizeSpecimen();
+  if (W) seedWorld();
+  updateLabText();
+  setTool("crumb");
+  requestAnimationFrame(t => { last = t; frame(t); });
+}
+setupAI();
+// wait for the sheets with load events (decode() can stall in a background tab)
+Promise.all([atlas, foodImg, spiderImg].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))).then(start);
+</script>

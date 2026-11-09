@@ -1,0 +1,6 @@
+.claude/
+ant-playground.html
+build/*.png
+build/preview.html
+build/ant-atlas*
+__pycache__/
