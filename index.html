@@ -1578,7 +1578,7 @@ async function speak(q, cue, onDone) {
     return null;
   }
   asking = true; gSend.disabled = true;
-  hush();
+  if (q) hush();
   if (q) addMsg("you", md(q));
   const history = chat.slice(-10).map(m => `${m.who === "you" ? "Anteater" : "Aunt Hillary"}: ${m.text}`).join("\n");
   if (q) chat.push({ who: "you", text: q });
@@ -1599,7 +1599,7 @@ async function speak(q, cue, onDone) {
     body.innerHTML = md(text);
     chat.push({ who: "her", text });
     aiWorked = true;
-    say(text);
+    say(text, !!q);
   } catch (e) {
     el.classList.remove("thinking"); el.classList.add("err");
     body.textContent = aiError(e);
@@ -1646,9 +1646,10 @@ function fillVoicePicker() {
   const cur = currentVoice(); if (cur) sel.value = cur.name;
 }
 const plain = t => t.replace(/\*\*|__|[*_`#>]/g, "").replace(/^\s*[-•]\s+/gm, "").replace(/\s+/g, " ").trim();
-function say(text) {
+// interrupt: true when answering the Anteater (cut off whatever she was saying); her own pleas queue instead
+function say(text, interrupt = true) {
   if (!tts || !voice.on || !text) return;
-  tts.cancel();
+  if (interrupt) tts.cancel();
   const v = currentVoice(), t = plain(text);
   // one sentence at a time: Chrome cuts long utterances off
   const parts = t.match(/[^.!?…]+[.!?…]+["”’)]*\s*|[^.!?…]+$/g) || [t];
@@ -1800,6 +1801,7 @@ function pleaFromAI(cue) {
 }
 function checkHunger() {
   if (colonyDead) return;
+  if (voice.on && tts && (tts.speaking || tts.pending)) return;   // let her finish one plea before the next
   const h = hunger();
   if (pleaded && h.f > 0.6) {          // she's been fed
     pleaded = false; lastLevel = 0; starved = 0;
