@@ -1,6 +1,6 @@
-# Ant Sprite Playground
+# Ant Playground
 
-**Live:** https://toontalk.github.io/ant-sprite-playground/
+**Live:** https://toontalk.github.io/ant-playground/
 
 A top-down ant colony built from AI-drawn sprite sheets. Ants wander, find crumbs, carry them home and lay scent trails that the others follow. A spider can be let in to hunt them. You are the Anteater, and you can chat with **Aunt Hillary**, the colony as a whole, who answers as a superorganism.
 
