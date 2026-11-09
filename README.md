@@ -14,8 +14,8 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
   - Nearby ants bolt, and many drop what they carry.
   - The scent there is wiped out.
   - A spider nearby is frightened off.
-- **Anteater**: tap or drag to lick up ants. The queen lays a new ant at the nest every second and a half until the colony is back to size.
-- **Let in a spider**: a spider comes in to hunt. Ants that see it run away. It eats up to three ants and then leaves.
+- **Anteater**: tap or drag to lick up ants. The pointer becomes the anteater's snout, and the tongue flicks out to where you tap.
+- **Spider**: tap to drop a spider there, up to three at once. Ants that see it run away. Each spider eats three ants and then leaves.
 - **Sprite lab**: turn any walker to any heading, step through its frames, and compare frames with the ghost of the previous one.
 
 ## Hunger

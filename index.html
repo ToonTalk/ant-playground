@@ -95,6 +95,7 @@ h1 em { font-style: normal; color: var(--ant); }
 .fs-btn svg { width: 18px; height: 18px; }
 .fs-btn .shrink { display: none; } .fs-btn[aria-pressed="true"] .shrink { display: inline; } .fs-btn[aria-pressed="true"] .grow { display: none; }
 .fs-btn:focus-visible { outline: 2px solid #f0b85a; outline-offset: 2px; }
+@media (max-width: 640px) { .toolbar button { padding: 6px 7px; font-size: 11.5px; } .toolbar { gap: 2px; } }
 .stats-btn { display: none; pointer-events: auto; cursor: pointer; border: 0; font: inherit; }
 @media (max-width: 640px) {
   .fs-btn span { display: none; } .fs-btn { top: 12px; bottom: auto; padding: 7px; }
@@ -274,6 +275,8 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/></svg>Scatter</button>
         <button id="tool-eat" aria-pressed="false" title="Tap or drag to lick up ants">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9c3-3 8-3 12-1l4 2"/><path d="M3 9c2 3 7 4 12 2"/><path d="M15 10c2 1 3 3 5 3 1.2 0 1.5 1.4.3 1.8-2.2.7-4-.6-5.3-2"/></svg>Anteater</button>
+        <button id="tool-spider" aria-pressed="false" title="Tap to drop a spider">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="14.5" rx="3" ry="4" fill="currentColor" fill-opacity=".25"/><circle cx="12" cy="8.6" r="2"/><path d="M10 9 5 5 3 7M14 9l5-4 2 2M9.5 12 4 10.5 2 12.5M14.5 12l5.5-1.5 2 2M9.5 15 4.5 17 3.5 20M14.5 15l5 2 1 3M10.5 18 8 21.5M13.5 18l2.5 3.5"/></svg>Spider</button>
       </div>
     </div>
 
@@ -343,7 +346,6 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <span class="lbl">Scene</span>
         <div class="checks">
           <button class="btn" id="b-pause">Pause</button>
-          <button class="btn ghost" id="b-spider">Let in a spider</button>
           <button class="btn ghost" id="b-clear">New ground</button>
         </div>
       </div>
@@ -568,7 +570,7 @@ function hunger() {
   const word = pantry <= 0 ? "starving" : f < 0.15 ? "hungry" : f < 0.35 ? "peckish" : f < 0.7 ? "content" : "well fed";
   return { f, word };
 }
-let spider = null, spiderEaten = 0, youEaten = 0;
+let spiders = [], spiderEaten = 0, youEaten = 0;
 let licks = [];                            // tongue flicks, for drawing
 let simTime = 0, events = [];              // what happened, for Aunt Hillary
 function note(text) {
@@ -673,34 +675,26 @@ function scatter(x, y) {
     if (a.carrying && R() < 0.7) { a.carrying = false; addCrumb(a.x, a.y, 1, 0); dropped++; }   // drop it in a panic
   }
   let spooked = false;
-  if (spider && spider.mode !== "leave" && Math.hypot(spider.x - x, spider.y - y) < R0 * 0.7) { spider.mode = "leave"; spider.rest = 0; spooked = true; }
-  note(`The Anteater stamped ${where(x, y)}. ${n} ants panicked${dropped ? `, ${dropped} dropped their crumbs` : ""}, and the scent there was wiped out.${spooked ? " The spider was frightened off." : ""}`);
+  for (const sp of spiders) if (sp.mode !== "leave" && Math.hypot(sp.x - x, sp.y - y) < R0 * 0.7) { sp.mode = "leave"; sp.rest = 0; spooked = true; }
+  note(`The Anteater stamped ${where(x, y)}. ${n} ants panicked${dropped ? `, ${dropped} dropped their crumbs` : ""}, and the scent there was wiped out.${spooked ? " A spider was frightened off." : ""}`);
 }
 
 // ---------- the spider ----------
 const spiderScale = () => antScale() * 3.4 * 30 / EXTRAS.spider.abdomen_px;   // abdomen 3.4× the ant's
-function releaseSpider() {
-  if (spider) { spider.mode = "leave"; spider.rest = 0; return; }
-  const n = nestXY(), side = (R() * 4) | 0, m = 70;
-  let x = side === 0 ? -m : side === 1 ? W + m : R() * W;
-  let y = side === 2 ? -m : side === 3 ? H + m : R() * H;
-  // come in from the side away from the nest
-  if (Math.hypot(x - n.x, y - n.y) < Math.min(W, H) * 0.5) { x = W - x; y = H - y; }
-  spider = { x, y, dir: angTo(x, y, W / 2, H / 2), walked: 0, mode: "hunt", rest: 0, meals: 0, pause: 0, burst: 2 };
-  note(`A spider crept in ${where(Math.max(0, Math.min(W, x)), Math.max(0, Math.min(H, y)))}.`);
-  updateSpiderButton();
+const MAX_SPIDERS = 3;
+// the Spider tool: a spider drops onto the ground where you tap, hunts, eats three ants and leaves
+function dropSpider(x, y) {
+  if (spiders.length >= MAX_SPIDERS) { flashTip("Three spiders at once is plenty. Wait for one to leave."); return; }
+  spiders.push({ x, y, dir: R() * 360, walked: 0, mode: "hunt", rest: 0.5, meals: 0, pause: 0, burst: 2, drop: 1 });
+  note(`The Anteater dropped a spider ${where(x, y)}.`);
 }
-function updateSpiderButton() {
-  const b = document.getElementById("b-spider");
-  if (b) b.textContent = spider ? "Shoo the spider" : "Let in a spider";
-}
-function stepSpider(dt) {
-  const s = spider; if (!s) return;
+function stepSpider(s, dt) {
+  if (s.drop > 0) { s.drop = Math.max(0, s.drop - dt / 0.5); return; }   // still falling
   const sc = spiderScale(), mouth = EXTRAS.spider.body_px * sc * 0.5;
   const pace = speedMul * (0.6 + sizeMul * 0.55);
   if (s.rest > 0) {                       // eating: holds still
     s.rest -= dt;
-    if (s.rest <= 0 && s.meals >= 3) { s.mode = "leave"; note("The spider has eaten its fill and is wandering off."); }
+    if (s.rest <= 0 && s.meals >= 3) { s.mode = "leave"; note("A spider has eaten its fill and is wandering off."); }
     return;
   }
   let target, speed;
@@ -708,7 +702,7 @@ function stepSpider(dt) {
     const ex = s.x < W / 2 ? -200 : W + 200, ey = s.y < H / 2 ? -200 : H + 200;
     target = Math.min(s.x, W - s.x) < Math.min(s.y, H - s.y) ? angTo(s.x, s.y, ex, s.y) : angTo(s.x, s.y, s.x, ey);
     speed = 75 * pace;
-    if (s.x < -90 || s.y < -90 || s.x > W + 90 || s.y > H + 90) { spider = null; note("The spider has gone."); updateSpiderButton(); return; }
+    if (s.x < -90 || s.y < -90 || s.x > W + 90 || s.y > H + 90) { s.gone = true; note("A spider has gone."); return; }
   } else {
     let prey = null, bd = Infinity;
     for (const a of ants) { const d = Math.hypot(a.x - s.x, a.y - s.y) * (a.carrying ? 0.8 : 1); if (d < bd) { bd = d; prey = a; } }
@@ -724,7 +718,7 @@ function stepSpider(dt) {
       ants.splice(ants.indexOf(prey), 1); logLife("eaten");
       if (prey.carrying) addCrumb(prey.x, prey.y, 1, 0);
       s.rest = 2.4; s.meals++; spiderEaten++;
-      note(`The spider caught one of my ants ${where(s.x, s.y)}.`);
+      note(`A spider caught one of my ants ${where(s.x, s.y)}.`);
       for (const a of ants) if (Math.hypot(a.x - s.x, a.y - s.y) < 170) { a.flee = Math.max(a.flee, 1.4 + R()); a.fx = s.x; a.fy = s.y; }
       return;
     }
@@ -843,12 +837,13 @@ function step(dt) {
   } else if (pantry > 5) { starveT = 0; starvingFor = 0; }
   if (!colonyDead && !ants.length && pantry < EGG_COST) colonyDies();
   const weak = pantry <= 0 ? 0.8 : 1;                      // starving ants are sluggish
-  stepSpider(dt);
+  for (const sp of spiders) stepSpider(sp, dt);
+  spiders = spiders.filter(sp => !sp.gone);
   const sees = 2 * ANT_LEN * sizeMul;          // how close a spider must be before an ant notices
 
   for (const a of ants) {
-    if (spider && spider.rest <= 0 && spider.mode !== "leave" && Math.hypot(spider.x - a.x, spider.y - a.y) < sees) {
-      a.flee = Math.max(a.flee, 0.5); a.fx = spider.x; a.fy = spider.y;
+    for (const sp of spiders) if (!sp.drop && sp.rest <= 0 && sp.mode !== "leave" && Math.hypot(sp.x - a.x, sp.y - a.y) < sees) {
+      a.flee = Math.max(a.flee, 0.5); a.fx = sp.x; a.fy = sp.y;
     }
     a.turn += (R() - 0.5) * 900 * dt;
     a.turn *= Math.pow(0.04, dt);
@@ -961,10 +956,14 @@ function render() {
     drawAnt(g, atlas, a.x, a.y, a.dir, Math.floor(a.walked / stride) % 8, s * grow(a), a.carrying);
     if (a.carrying) carrying++;
   }
-  if (spider) {
-    const ss = spiderScale();
-    drawSpiderShadow(g, spider.x, spider.y, spider.dir, ss);
-    drawSpider(g, spiderImg, spider.x, spider.y, spider.dir, Math.floor(spider.walked / (SPIDER_STRIDE * ST * ss)) % 8, ss);
+  for (const sp of spiders) {
+    // a dropped spider falls in from above: bigger, with its shadow off to the side, settling onto the ground
+    const ss = spiderScale() * (1 + 0.6 * sp.drop * sp.drop), off = 30 * sp.drop;
+    drawSpiderShadow(g, sp.x + off, sp.y + off, sp.dir, spiderScale());
+    drawSpider(g, spiderImg, sp.x, sp.y, sp.dir, Math.floor(sp.walked / (SPIDER_STRIDE * ST * spiderScale())) % 8, ss, 1 - 0.4 * sp.drop);
+  }
+  if (tool === "spider" && snout.over && !pointer.down) {   // where the spider will land
+    drawSpider(g, spiderImg, pointer.x, pointer.y, 90, 0, spiderScale(), 0.4);
   }
   drawSnout(g);
   document.getElementById("hud-carry").textContent = carrying;
@@ -1168,29 +1167,36 @@ const CURSORS = {
   leadDown: "grabbing",
   scare: svgCursor(`<g stroke="#1a1511" stroke-width="4" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><g stroke="#fff3d6" stroke-width="2" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><circle cx="16" cy="16" r="2" fill="#f0b85a" stroke="#1a1511"/>`),
   eat: "none",                // the snout is drawn on the canvas instead
+  spider: "crosshair",
 };
 function setCursor() {
   world.style.cursor = tool === "lead" ? (pointer.down ? CURSORS.leadDown : CURSORS.lead) : CURSORS[tool];
 }
 function setTool(t) {
   tool = t;
-  for (const k of ["crumb", "lead", "scare", "eat"]) $("tool-" + k).setAttribute("aria-pressed", String(k === t));
+  for (const k of ["crumb", "lead", "scare", "eat", "spider"]) $("tool-" + k).setAttribute("aria-pressed", String(k === t));
   world.classList.toggle("lead", t === "lead");
   world.classList.toggle("draw", t === "crumb" || t === "eat");
   $("tip").textContent = TIPS[t];
   setCursor();
 }
+let tipTimer = 0;
+function flashTip(msg) {
+  $("tip").textContent = msg; clearTimeout(tipTimer);
+  tipTimer = setTimeout(() => { $("tip").textContent = TIPS[tool]; }, 2500);
+}
 const TIPS = {
   crumb: "Tap the ground to drop a crumb, or drag to sprinkle a line of them",
   lead: "Hold and drag: nearby ants follow you",
   scare: "Tap near ants to scare them; they bolt, drop what they carry, and lose the trail",
-  eat: "You're the anteater: tap or drag to lick up ants. The queen lays new ones at the nest."
+  eat: "You're the anteater: tap or drag to lick up ants. The queen lays new ones at the nest.",
+  spider: "Tap to drop a spider. It hunts, eats three ants, then leaves. Scatter near it to frighten it off."
 };
 $("tool-crumb").onclick = () => setTool("crumb");
 $("tool-lead").onclick = () => setTool("lead");
 $("tool-scare").onclick = () => setTool("scare");
 $("tool-eat").onclick = () => setTool("eat");
-$("b-spider").onclick = releaseSpider;
+$("tool-spider").onclick = () => setTool("spider");
 // the Ants slider shows the population as it rises and falls; moving it hatches ants or lets some die
 let sliderHeld = false, sliderUntil = 0;
 $("n-ants").oninput = e => {
@@ -1218,7 +1224,7 @@ $("b-clear").onclick = () => {
   groundSeed = (groundSeed * 48271) % 2147483647;
   nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
   W = 0; resize(); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
-  spider = null; spiderEaten = youEaten = 0; updateSpiderButton();
+  spiders = []; spiderEaten = youEaten = 0;
   tally.born = tally.starved = tally.wished = 0; bodies = [];
   refound(); pantry = 70;
   note("The ground was swept clean and a new nest dug.");
@@ -1243,6 +1249,8 @@ world.addEventListener("pointerdown", e => {
     dropAt(p, 45);
   } else if (tool === "scare") {
     scatter(p.x, p.y);
+  } else if (tool === "spider") {
+    dropSpider(p.x, p.y);
   } else if (tool === "eat") {
     capture(e);
     lick(p.x, p.y); lastDrop = p;
@@ -1311,8 +1319,8 @@ function sense() {
   const total = by.reduce((a, b) => a + b, 0);
   const dirs = by.map((v, i) => [v, names[i]]).filter(([v]) => v > total * 0.2).sort((a, b) => b[0] - a[0]).map(d => d[1]);
   L.push(strong < 15 ? "Scent: hardly any on the ground." : `Scent: ${strong < 120 ? "faint" : strong < 400 ? "clear" : "strong"} trails, mostly ${dirs.join(" and ")} of the nest.`);
-  if (spider) L.push(`Danger: a spider is ${spider.rest > 0 ? "eating one of my ants" : spider.mode === "leave" ? "leaving" : "hunting"} ${where(Math.max(0, Math.min(W, spider.x)), Math.max(0, Math.min(H, spider.y)))}.`);
-  else L.push("Danger: no spider about.");
+  for (const sp of spiders) L.push(`Danger: a spider is ${sp.drop ? "dropping onto the ground" : sp.rest > 0 && sp.meals ? "eating one of my ants" : sp.mode === "leave" ? "leaving" : "hunting"} ${where(Math.max(0, Math.min(W, sp.x)), Math.max(0, Math.min(H, sp.y)))}.`);
+  if (!spiders.length) L.push("Danger: no spiders about.");
   L.push(`Eaten so far: ${youEaten} by the Anteater, ${spiderEaten} by spiders.`);
   if (paused) L.push("Time is standing still (the Anteater pressed Pause).");
   const recent = events.filter(e => simTime - e.t < 180).slice(-10);
@@ -1340,7 +1348,7 @@ How your ants really work on this page. These are the true rules; when asked, de
 - The queen lays new ants at the nest when the pantry has food to spare (over about a third full), faster the fuller it is, and each egg costs food. So the colony grows when food is plentiful and shrinks when ants starve or are eaten. The Ants slider lets the Anteater call for more ants (they hatch from the nest) or wish some away (they die where they stand).
 - Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and they begin to starve to death, one every twelve seconds at first and faster the longer it lasts. With no help, the whole colony dies, and you with it.
 - Your composure follows your hunger: witty and content when fed; polite but pressing when hungry; urgent when starving; desperate when your ants are dying; and when only a handful are left, your thoughts come out faint and broken, because a colony needs many ants to think at all. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
-- The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), and Anteater (licks up ants). "Let in a spider" brings a hunting spider. Ants that see it within about two ant-lengths run; it eats up to three ants and then wanders off. Scatter near the spider frightens it away.
+- The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), Anteater (licks up ants), and Spider (drops a hunting spider wherever the Anteater taps, up to three at once). Ants that see a spider within about two ant-lengths run; each spider eats three ants and then wanders off. Scatter near a spider frightens it away.
 
 What you feel right now is given under WHAT YOU FEEL. Speak of it as sensations ("a tickle of scent to the north-east", "a chill where my scouts used to be") and give numbers only when asked. Never make up things that aren't there.
 
