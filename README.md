@@ -18,6 +18,20 @@ Aunt Hillary comes from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadte
 - **Let in a spider**: a spider comes in to hunt. Ants that see it run away. It eats up to three ants and then leaves.
 - **Sprite lab**: turn any walker to any heading, step through its frames, and compare frames with the ghost of the previous one.
 
+## Hunger
+
+- **The pantry:** every crumb carried home goes into the pantry, and every ant eats from it all the time.
+- **The queen:** each egg she lays costs food.
+- **An empty pantry:** the queen stops laying, the ants slow down, and they start to starve. One dies every twelve seconds at first, then faster.
+- **Her pleas:** as things get worse, Aunt Hillary asks the Anteater for help more often and more desperately. When only a handful of ants are left, her thoughts come out broken, because a colony needs many ants to think at all.
+- **If nobody helps:** the colony dies. You can found a new one, but that Aunt Hillary is a new pattern who remembers nothing of the last.
+
+## Voice
+
+- **Voice on/off:** the button reads her answers aloud using the browser's own speech.
+- **Her voice:** it is picked to suit her: a warm British woman's voice where one is available (Edge's Libby or Sonia, Apple's Martha or Serena, Chrome's Google UK English Female), spoken a little slower and lower. You can choose another voice.
+- **Talking to her:** the microphone button lets you speak to her instead of typing. Chrome and Edge send the sound to their own servers to turn it into text.
+
 ## Aunt Hillary's AI
 
 - **Gemini Nano**, built into desktop Chrome. It is free and runs on your computer, and it is the default when Chrome offers it.

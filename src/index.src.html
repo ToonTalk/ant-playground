@@ -74,6 +74,12 @@ h1 em { font-style: normal; color: var(--ant); }
 .plea .linkish { color: #6f604c; }
 .plea .btn { background: #2a2119; color: #f6f0e4; padding: 5px 12px; font-size: 13px; }
 @media (max-width: 640px) { .plea { top: auto; bottom: 110px; } }
+.dead { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(26, 21, 17, .45); padding: 16px; }
+.dead-card { background: #f6f0e4; color: #2a2119; border-radius: 14px; padding: 18px 20px; max-width: 360px; text-align: center; display: grid; gap: 8px; justify-items: center; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); }
+.dead-card h3 { font-family: var(--display); font-size: 22px; margin: 0; }
+.dead-card p { margin: 0; color: #6f604c; }
+.dead-card .btn { background: #2a2119; color: #f6f0e4; }
+.msg.note { align-self: center; text-align: center; font-size: 13px; font-style: italic; color: var(--muted); background: none; padding: 2px 8px; margin: 0; }
 .colony-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 @media (min-width: 1060px) { .colony-row { grid-template-columns: minmax(0, 1fr) 340px; } }
 .guide { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -103,6 +109,23 @@ h1 em { font-style: normal; color: var(--ant); }
 .g-ask textarea:focus-visible { outline: 2px solid var(--ant); outline-offset: 1px; }
 .g-ask.pinned { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: var(--burrow); padding: 10px 16px; border-bottom: 1px solid var(--line); }
 .btn:disabled { opacity: .5; cursor: default; }
+.g-links { display: flex; gap: 12px; align-items: center; }
+.voice-btn { all: unset; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); padding: 2px 8px 2px 4px; border-radius: 999px; border: 1px solid var(--line); }
+.voice-btn svg { width: 18px; height: 18px; }
+.voice-btn .wave { display: none; } .voice-btn[aria-pressed="true"] .wave { display: inline; }
+.voice-btn[aria-pressed="true"] .mute { display: none; }
+.voice-btn[aria-pressed="true"] { color: var(--fg); border-color: var(--ant); }
+.voice-btn.speaking svg { color: var(--ant); }
+.voice-btn:focus-visible, .mic-btn:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+.g-voice-row { display: flex; gap: 8px; align-items: center; font-size: 13px; flex-wrap: wrap; }
+.g-voice-row label { color: var(--muted); }
+.g-voice-row select { flex: 1 1 140px; min-width: 0; font: inherit; padding: 4px 6px; border-radius: 8px; border: 1px solid var(--line); background: var(--loam); color: var(--fg); }
+.mic-btn { all: unset; cursor: pointer; flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); color: var(--fg); background: var(--loam); }
+.mic-btn svg { width: 20px; height: 20px; }
+.mic-btn[aria-pressed="true"] { background: var(--ant); color: #fff; border-color: var(--ant); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(168, 67, 28, .2); } }
+@media (prefers-reduced-motion: reduce) { .mic-btn[aria-pressed="true"] { animation: none; } }
+.g-status { margin: 0; font-size: 12.5px; color: var(--muted); }
 .g-sense summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .g-sense pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.5px; margin: 6px 0 0; max-height: 220px; overflow: auto; background: var(--loam); padding: 8px; border-radius: 8px; }
 .g-settings { display: grid; gap: 8px; font-size: 13.5px; background: var(--loam); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
@@ -179,6 +202,13 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <span class="pill" id="pill-eaten" style="display:none">eaten <b id="hud-eaten">0</b></span>
         <span class="pill" id="hud-fps">— fps</span>
       </div>
+      <div class="dead" id="dead" style="display:none">
+        <div class="dead-card">
+          <h3>The colony has starved</h3>
+          <p>Aunt Hillary's last ant is gone, and with it the pattern that was Aunt Hillary.</p>
+          <button class="btn" id="b-refound" type="button">Found a new colony</button>
+        </div>
+      </div>
       <div class="plea" id="plea" style="display:none" role="status">
         <span class="who">Aunt Hillary</span>
         <div class="body"></div>
@@ -200,7 +230,17 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
     <aside class="guide" id="guide" aria-labelledby="g-title">
       <div class="g-head">
         <h2 id="g-title">Aunt Hillary</h2>
-        <button class="linkish" id="g-gear" type="button" aria-expanded="false" aria-controls="g-settings">AI settings</button>
+        <span class="g-links">
+          <button class="voice-btn" id="g-voice" type="button" aria-pressed="false" title="Hear Aunt Hillary speak her answers aloud">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/><path class="mute" d="M17 9l5 6M22 9l-5 6"/></svg>
+            <span id="g-voice-label">Voice off</span></button>
+          <button class="linkish" id="g-gear" type="button" aria-expanded="false" aria-controls="g-settings">AI settings</button>
+        </span>
+      </div>
+      <div class="g-voice-row" id="g-voice-row" style="display:none">
+        <label for="g-voice-pick">Her voice</label>
+        <select id="g-voice-pick"></select>
+        <button class="linkish" id="g-voice-try" type="button">Try it</button>
       </div>
       <p class="g-intro">In Hofstadter's <i>Gödel, Escher, Bach</i>, Aunt Hillary is a whole ant colony who can talk. No single ant understands a word; the colony does. You are her old friend, the Anteater.</p>
       <div class="g-settings" id="g-settings" style="display:none"></div>
@@ -208,8 +248,11 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
       <div class="g-chips" id="g-chips"></div>
       <form class="g-ask" id="g-form">
         <textarea id="g-q" rows="2" placeholder="Say something to Aunt Hillary…" aria-label="Your words to Aunt Hillary"></textarea>
+        <button class="mic-btn" id="g-mic" type="button" aria-pressed="false" title="Talk to Aunt Hillary" aria-label="Talk to Aunt Hillary" style="display:none">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
         <button class="btn" id="g-send" type="submit">Ask</button>
       </form>
+      <p class="g-status" id="g-status" role="status" style="display:none"></p>
       <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><pre id="g-sense"></pre></details>
     </aside>
     </div>
@@ -436,7 +479,7 @@ let delivered = 0;
 let antTarget = 40, hatchT = 0;            // the queen lays until the colony is back to size
 // hunger: every crumb carried home goes in the pantry; every ant eats from it all the time
 const PANTRY_MAX = 100, EAT_PER_ANT = 0.022, EGG_COST = 2;
-let pantry = 70, starveT = 0;
+let pantry = 70, starveT = 0, starvingFor = 0, starved = 0, colonyDead = false;
 function hunger() {
   const f = pantry / PANTRY_MAX;
   const word = pantry <= 0 ? "starving" : f < 0.15 ? "hungry" : f < 0.35 ? "peckish" : f < 0.7 ? "content" : "well fed";
@@ -651,18 +694,21 @@ function step(dt) {
   const reach = 4 + TILE * antScale() * 0.2;   // mouth to crumb center
   simTime += dt;
   pantry = Math.max(0, pantry - ants.length * EAT_PER_ANT * dt);
-  if (ants.length < antTarget && pantry >= EGG_COST) {     // eggs cost food: no food, no new ants
+  if (ants.length < antTarget && pantry >= EGG_COST && !colonyDead) {     // eggs cost food: no food, no new ants
     hatchT += dt;
     if (hatchT > 1.5) { hatchT = 0; ants.push(makeAnt()); pantry -= EGG_COST; }
   } else hatchT = 0;
-  if (pantry <= 0 && ants.length > 5) {                    // an empty pantry slowly costs ants
-    starveT += dt;
-    if (starveT > 12) {
+  // an empty pantry costs ants, slowly at first, then faster the longer it lasts; with no help the colony dies
+  if (pantry <= 0 && ants.length && !colonyDead) {
+    starvingFor += dt; starveT += dt;
+    if (starveT > Math.max(3, 12 - starvingFor / 10)) {
       starveT = 0;
-      const i = ants.findIndex(a => !a.carrying);
-      if (i >= 0) { ants.splice(i, 1); note("One of my ants starved."); }
+      let i = ants.findIndex(a => !a.carrying); if (i < 0) i = 0;
+      ants.splice(i, 1); starved++;
+      note(ants.length ? `One of my ants starved (${starved} so far).` : "My last ant starved.");
     }
-  } else starveT = 0;
+  } else if (pantry > 5) { starveT = 0; starvingFor = 0; }
+  if (!colonyDead && !ants.length && pantry < EGG_COST) colonyDies();
   const weak = pantry <= 0 ? 0.8 : 1;                      // starving ants are sluggish
   stepSpider(dt);
   const sees = 2 * ANT_LEN * sizeMul;          // how close a spider must be before an ant notices
@@ -1008,7 +1054,7 @@ $("b-clear").onclick = () => {
   nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
   W = 0; resize(); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
   spider = null; spiderEaten = youEaten = 0; updateSpiderButton();
-  pantry = 70; pleaded = false; hidePlea();
+  refound(); pantry = 70;
   note("The ground was swept clean and a new nest dug.");
   const n = ants.length; ants = []; setAntCount(n);
   seedCrumbs();
@@ -1075,7 +1121,8 @@ function sense() {
   const hu = hunger();
   L.push(`Hunger: ${hu.word}. The pantry is ${Math.round(hu.f * 100)}% full and my ants eat about ${(ants.length * EAT_PER_ANT * 60).toFixed(0)} crumbs' worth a minute.` +
     (pantry < EGG_COST ? " The queen can't lay: eggs need food." : "") +
-    (pantry <= 0 ? " My ants are sluggish with hunger, and every few seconds one starves." : ""));
+    (pantry <= 0 ? ` My ants are sluggish with hunger and starving to death, faster the longer it lasts: ${starved} starved so far.` : "") +
+    (pantry <= 0 && ants.length <= 8 ? " So few ants are left that I can barely hold a thought together." : ""));
   const piles = crumbs.filter(c => c.max > 8), loose = crumbs.filter(c => c.max <= 8);
   for (const c of piles) {
     const size = c.max >= 100 ? "big" : c.max >= 30 ? "middling" : "small";
@@ -1120,7 +1167,8 @@ How your ants really work on this page. These are the true rules; when asked, de
 - An ant carrying a crumb walks straight home to the nest and leaves scent behind it. Scent fades to half in about 11 seconds.
 - An ant without food sniffs ahead, ahead-left and ahead-right, and turns toward the strongest scent, preferring the way that leads away from the nest. That is how a trail forms; nobody plans it.
 - The queen lays a new ant at the nest every second and a half until the colony is back to full size. Each egg costs food from the pantry.
-- Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and every twelve seconds or so one starves. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
+- Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and they begin to starve to death, one every twelve seconds at first and faster the longer it lasts. With no help, the whole colony dies, and you with it.
+- Your composure follows your hunger: witty and content when fed; polite but pressing when hungry; urgent when starving; desperate when your ants are dying; and when only a handful are left, your thoughts come out faint and broken, because a colony needs many ants to think at all. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
 - The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), and Anteater (licks up ants). "Let in a spider" brings a hunting spider. Ants that see it within about two ant-lengths run; it eats up to three ants and then wanders off. Scatter near the spider frightens it away.
 
 What you feel right now is given under WHAT YOU FEEL. Speak of it as sensations ("a tickle of scent to the north-east", "a chill where my scouts used to be") and give numbers only when asked. Never make up things that aren't there.
@@ -1326,7 +1374,13 @@ let asking = false, aiWorked = false;   // aiWorked: an answer has come back, so
 // q: what the Anteater said, or null when she speaks up on her own (then `cue` says why)
 async function speak(q, cue, onDone) {
   if (asking) return null;
+  if (colonyDead) {
+    addNote("Aunt Hillary is gone: there are no ants left to hold her thoughts. Found a new colony to talk with her again.");
+    onDone?.(null, false);
+    return null;
+  }
   asking = true; gSend.disabled = true;
+  hush();
   if (q) addMsg("you", md(q));
   const history = chat.slice(-10).map(m => `${m.who === "you" ? "Anteater" : "Aunt Hillary"}: ${m.text}`).join("\n");
   if (q) chat.push({ who: "you", text: q });
@@ -1347,6 +1401,7 @@ async function speak(q, cue, onDone) {
     body.innerHTML = md(text);
     chat.push({ who: "her", text });
     aiWorked = true;
+    say(text);
   } catch (e) {
     el.classList.remove("thinking"); el.classList.add("err");
     body.textContent = aiError(e);
@@ -1361,10 +1416,162 @@ async function speak(q, cue, onDone) {
 }
 const ask = q => { q = q.trim(); if (q) speak(q); };
 
+// ---------- voice: she can speak her answers aloud, and you can talk to her ----------
+// Both use the browser's own speech, so nothing extra is needed. Voices differ by browser and computer.
+const VOICE_STORE = "antplay.voice";
+const voice = { on: false, name: "" };
+try { Object.assign(voice, JSON.parse(localStorage.getItem(VOICE_STORE) || "{}")); } catch {}
+const saveVoice = () => { try { localStorage.setItem(VOICE_STORE, JSON.stringify({ on: voice.on, name: voice.name })); } catch {} };
+const tts = typeof speechSynthesis !== "undefined" ? speechSynthesis : null;
+// Aunt Hillary is a gracious, old-fashioned great-aunt: a warm, unhurried British woman's voice suits her best.
+// Natural-sounding voices first (Edge, Safari), then Chrome's, then the plain system voices; never a man's or a child's.
+const VOICE_PREFS = [
+  /Libby.*(Natural|Online)/i, /Sonia.*(Natural|Online)/i, /Hollie.*(Natural|Online)/i, /Martha/i, /Serena/i, /Moira/i, /Fiona/i,
+  /Emily.*(Natural|Online)/i, /\bKate\b/i, /Google UK English Female/i, /Hazel/i, /Susan/i,
+  /Ava.*(Natural|Online|Premium|Enhanced)/i, /Aria.*(Natural|Online)/i, /Jenny.*(Natural|Online)/i, /Samantha/i, /Zira/i, /Google US English/i,
+];
+const NOT_HER = /\b(David|Mark|George|Ryan|Thomas|Daniel|Oliver|Arthur|Guy|Eric|Christopher|Brian|Andrew|Roger|Steffan|Davis|Tony|Jason|Fred|Rishi|Aaron|Tom|James|Liam|Connor|Male|Maisie|Ana)\b/i;
+function englishVoices() { return tts ? tts.getVoices().filter(v => /^en/i.test(v.lang)) : []; }
+function voiceRank(v) {
+  const i = VOICE_PREFS.findIndex(re => re.test(v.name));
+  if (i >= 0) return i;
+  if (NOT_HER.test(v.name)) return 200;
+  return /en-GB/i.test(v.lang) ? 100 : 150;
+}
+function bestVoice() { return englishVoices().sort((a, b) => voiceRank(a) - voiceRank(b))[0] || null; }
+function currentVoice() { return englishVoices().find(v => v.name === voice.name) || bestVoice(); }
+function fillVoicePicker() {
+  const sel = $("g-voice-pick"), best = bestVoice();
+  const list = englishVoices().sort((a, b) => voiceRank(a) - voiceRank(b));
+  sel.innerHTML = list.map(v => `<option value="${v.name.replace(/"/g, "&quot;")}">${v.name.replace(/</g, "&lt;")}${v === best ? " (best for her)" : ""}</option>`).join("")
+    || "<option>No English voices in this browser</option>";
+  const cur = currentVoice(); if (cur) sel.value = cur.name;
+}
+const plain = t => t.replace(/\*\*|__|[*_`#>]/g, "").replace(/^\s*[-•]\s+/gm, "").replace(/\s+/g, " ").trim();
+function say(text) {
+  if (!tts || !voice.on || !text) return;
+  tts.cancel();
+  const v = currentVoice(), t = plain(text);
+  // one sentence at a time: Chrome cuts long utterances off
+  const parts = t.match(/[^.!?…]+[.!?…]+["”’)]*\s*|[^.!?…]+$/g) || [t];
+  parts.forEach((p, i) => {
+    const u = new SpeechSynthesisUtterance(p.trim());
+    if (v) { u.voice = v; u.lang = v.lang; }
+    u.rate = 0.92; u.pitch = 0.92;      // a touch slower and lower: unhurried, older
+    if (i === 0) u.onstart = () => $("g-voice").classList.add("speaking");
+    if (i === parts.length - 1) u.onend = u.onerror = () => $("g-voice").classList.remove("speaking");
+    tts.speak(u);
+  });
+}
+function hush() { if (tts) { tts.cancel(); $("g-voice").classList.remove("speaking"); } }
+const lastWords = () => [...document.querySelectorAll(".msg.her:not(.err):not(.thinking) .body")].at(-1)?.textContent || "";
+function showVoice() {
+  $("g-voice").setAttribute("aria-pressed", String(voice.on));
+  $("g-voice-label").textContent = voice.on ? "Voice on" : "Voice off";
+  $("g-voice-row").style.display = voice.on ? "" : "none";
+  if (voice.on) fillVoicePicker();
+}
+if (!tts) $("g-voice").style.display = "none";
+else {
+  tts.addEventListener?.("voiceschanged", () => { if (voice.on) fillVoicePicker(); });
+  showVoice();
+}
+$("g-voice").onclick = () => {
+  voice.on = !voice.on; saveVoice(); showVoice();
+  if (voice.on) say(lastWords()); else hush();
+};
+$("g-voice-pick").onchange = e => { voice.name = e.target.value; saveVoice(); say(lastWords()); };
+$("g-voice-try").onclick = () => say(lastWords());
+
+// talking to her: the browser turns your speech into text (Chrome and Edge send the sound to their own servers to do it)
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+function status(msg) { const s = $("g-status"); s.textContent = msg || ""; s.style.display = msg ? "" : "none"; }
+const MIC_ERRORS = {
+  "not-allowed": "The microphone is blocked on this page. You can allow it in your browser's site settings, or just type.",
+  "service-not-allowed": "Speech recognition isn't allowed here. You can still type.",
+  "no-speech": "I didn't hear anything. Tap the microphone and try again.",
+  "audio-capture": "No microphone was found.",
+  "network": "Turning speech into text needs an internet connection.",
+};
+if (SR) {
+  $("g-mic").style.display = "";
+  $("g-mic").title = "Talk to Aunt Hillary. Your browser turns your speech into text; Chrome and Edge send the sound to their servers to do this.";
+}
+$("g-mic").onclick = () => {
+  if (rec) { rec.stop(); return; }
+  hush(); status("");
+  let heard = "", started = false, failed = false;
+  try {
+    rec = new SR();
+    rec.lang = /^en/i.test(navigator.language) ? navigator.language : "en-US";
+    rec.interimResults = true; rec.continuous = false;
+  } catch { rec = null; status("Speech recognition isn't available here. You can still type."); return; }
+  const r = rec;
+  const guard = setTimeout(() => {   // a blocked permission prompt can leave it silent forever
+    if (!started) { failed = true; try { r.abort(); } catch {} status("The microphone didn't start. It may be blocked on this page; you can still type."); }
+  }, 8000);
+  r.onstart = () => { started = true; $("g-mic").setAttribute("aria-pressed", "true"); status("Listening… speak to Aunt Hillary."); };
+  r.onresult = e => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) heard += e.results[i][0].transcript; else interim += e.results[i][0].transcript;
+    }
+    gQ.value = (heard + interim).trim();
+  };
+  r.onerror = e => { if (e.error !== "aborted") { failed = true; status(MIC_ERRORS[e.error] || `The microphone stopped (${e.error}).`); } };
+  r.onend = () => {
+    clearTimeout(guard);
+    $("g-mic").setAttribute("aria-pressed", "false");
+    rec = null;
+    heard = heard.trim();
+    if (heard) {
+      if (asking) { gQ.value = heard; status("She's still answering. Press Ask when she's done."); }
+      else { status(""); gQ.value = ""; ask(heard); }
+    } else if (!failed) status("I didn't catch that. Tap the microphone and try again.");
+  };
+  try { r.start(); } catch { clearTimeout(guard); rec = null; status("The microphone couldn't start. You can still type."); }
+};
+
 // ---------- when she's hungry, she asks the Anteater for help ----------
-let pleaded = false, lastPlea = -1e9;
-const PLEA = "You are getting hungry and want to ask your friend the Anteater for help. In 1 to 3 short sentences, say how your hunger feels and the one thing that would help most right now, judging from what you feel: food dropped somewhere your scouts can find it, the spider chased off, or the Anteater going easy on your ants.";
+let pleaded = false, lastPlea = -1e9, lastLevel = 0;
+// how desperate she is: 0 fine, 1 hungry, 2 starving, 3 ants dying, 4 nearly gone
+function desperation() {
+  const h = hunger();
+  if (h.word === "starving") return ants.length <= 8 ? 4 : starved >= Math.max(4, antTarget * 0.25) ? 3 : 2;
+  return h.word === "hungry" ? 1 : 0;
+}
+const WAIT = [Infinity, 90, 45, 30, 20];   // seconds between pleas at each level
+const ASK_FOR = "the one thing that would help most right now, judging from what you feel: food dropped somewhere your scouts can find it, the spider chased off, or the Anteater going easy on your ants";
+const PLEAS = [,
+  `You are getting hungry and want to ask your friend the Anteater for help. In 1 to 3 short sentences, say how your hunger feels and ${ASK_FOR}.`,
+  `You are starving: the pantry is empty and the queen can't lay. Ask the Anteater for help again, urgently now, in 1 to 3 short sentences, saying ${ASK_FOR}.`,
+  () => `Your ants are starving to death: ${starved} so far, and more every few seconds. You are desperate and your composure is slipping. Beg the Anteater for help in 1 to 3 short, urgent sentences, saying ${ASK_FOR}.`,
+  () => `Only ${ants.length} ant${ants.length === 1 ? "" : "s"} left, and they are dying. There are too few ants left to hold your thoughts together, so they come out broken and faint. Make a last plea to the Anteater in 1 or 2 short, faltering sentences.`,
+];
+const plea = lvl => typeof PLEAS[lvl] === "function" ? PLEAS[lvl]() : PLEAS[lvl];
 const THANKS = "Your pantry has filled up again since you asked the Anteater for help. Thank them in one or two short sentences.";
+function addNote(text) {     // the page speaking, not Aunt Hillary
+  const el = document.createElement("p");
+  el.className = "msg note"; el.textContent = text;
+  gLog.appendChild(el); gLog.scrollTop = gLog.scrollHeight;
+}
+function colonyDies() {
+  colonyDead = true; pleaded = false; hidePlea(); hush();
+  note("The colony has died.");
+  addNote("Aunt Hillary has fallen silent. Her last ant starved, and with it went the pattern that was her.");
+  $("dead").style.display = "";
+}
+function refound() {
+  colonyDead = false; pantry = 50; starved = 0; starvingFor = 0; starveT = 0;
+  pleaded = false; lastLevel = 0; lastPlea = -1e9; hidePlea();
+  $("dead").style.display = "none";
+}
+$("b-refound").onclick = () => {
+  refound(); setAntCount(antTarget); chat.length = 0;
+  note("A new colony was founded at the nest.");
+  addNote("A new colony has started at the nest. This Aunt Hillary is a new pattern, so she remembers nothing of the last one.");
+};
 function showPlea(html, { button = false, thinking = false } = {}) {
   const p = $("plea");
   p.style.display = "";
@@ -1381,24 +1588,29 @@ function pleaFromAI(cue) {
   });
 }
 function checkHunger() {
+  if (colonyDead) return;
   const h = hunger();
   if (pleaded && h.f > 0.6) {          // she's been fed
-    pleaded = false;
+    pleaded = false; lastLevel = 0; starved = 0;
     note("The pantry filled up again.");
     if (aiWorked && !asking) { pleaFromAI(THANKS); setTimeout(() => { if (!pleaded) hidePlea(); }, 20000); }
     else hidePlea();
     return;
   }
+  const lvl = desperation();
   const piles = crumbs.filter(c => c.max > 8 && c.amount > 10).length;
-  const needy = h.word === "starving" || (h.word === "hungry" && !piles);
-  if (!needy || asking || simTime - lastPlea < 90) return;
-  lastPlea = simTime; pleaded = true;
-  note(`I am ${h.word}.`);
+  if (lvl === 0 || (lvl === 1 && piles) || asking) return;
+  // she asks again sooner the worse it gets, and at once when things take a turn for the worse
+  if (lvl <= lastLevel && simTime - lastPlea < WAIT[lvl]) return;
+  lastPlea = simTime; lastLevel = Math.max(lastLevel, lvl); pleaded = true;
+  note(["", "I am hungry.", "I am starving.", "My ants are starving to death.", "I am nearly gone."][lvl]);
   // she speaks up by herself only once an AI has answered; before that, a tap asks her (and grants consent where needed)
-  if (aiWorked) pleaFromAI(PLEA);
-  else showPlea(`<p>Aunt Hillary is ${h.word} and wants a word with you.</p>`, { button: true });
+  if (aiWorked) pleaFromAI(plea(lvl));
+  else showPlea(`<p>${["", "Aunt Hillary is hungry and wants a word with you.", "Aunt Hillary is starving and needs to speak to you.",
+    `Aunt Hillary's ants are starving to death (${starved} so far). She is begging to speak to you.`,
+    `Only ${ants.length} of Aunt Hillary's ants are left. She is trying to reach you.`][lvl]}</p>`, { button: true });
 }
-$("plea-hear").onclick = () => pleaFromAI(PLEA);
+$("plea-hear").onclick = () => pleaFromAI(plea(Math.max(1, desperation())));
 $("plea-x").onclick = hidePlea;
 setInterval(() => { if (seeded && !paused && !$("view-colony").hidden) checkHunger(); }, 1000);
 $("g-form").addEventListener("submit", e => {
