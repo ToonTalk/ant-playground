@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Making Ant Playground</title>
+<meta name="description" content="How Ant Playground was made in one day: from one AI-drawn ant sprite sheet to a living colony with a spider, an anteater, hunger, and Aunt Hillary, the talking colony from Gödel, Escher, Bach.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Cellipse cx=%2216%22 cy=%2222%22 rx=%225%22 ry=%227%22 fill=%22%232a1a10%22/%3E%3Ccircle cx=%2216%22 cy=%2212%22 r=%223.4%22 fill=%22%23a8431c%22/%3E%3Ccircle cx=%2216%22 cy=%226.5%22 r=%223%22 fill=%22%23a8431c%22/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  --loam: #ebe2d1; --burrow: #f6f0e4; --line: #d3c5ad; --fg: #2a2119; --muted: #6f604c;
+  --ant: #a8431c; --amber: #b07a12; --chip-bg: #e4d8c3;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --loam: #1a1511; --burrow: #241d17; --line: #3b3128; --fg: #efe4d2; --muted: #a8977f; --ant: #e0703c; --amber: #e8b04c; --chip-bg: #2f261e; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --loam: #1a1511; --burrow: #241d17; --line: #3b3128; --fg: #efe4d2; --muted: #a8977f; --ant: #e0703c; --amber: #e8b04c; --chip-bg: #2f261e; color-scheme: dark; }
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--loam); color: var(--fg); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+main { max-width: 760px; margin: 0 auto; padding: 32px 16px 80px; }
+header.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 15px; margin-bottom: 36px; }
+header.top a { color: var(--ant); }
+.kicker { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 8px; }
+h1 { font-family: var(--display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.02; letter-spacing: -0.02em; margin: 0 0 16px; text-wrap: balance; }
+h1 em { font-style: normal; color: var(--ant); }
+.lede { font-size: 20px; color: var(--muted); margin: 0 0 28px; max-width: 60ch; }
+h2 { font-family: var(--display); font-weight: 800; font-size: 28px; letter-spacing: -0.01em; line-height: 1.15; margin: 56px 0 12px; text-wrap: balance; }
+h2 .n { font-family: var(--mono); font-weight: 600; font-size: 13px; color: var(--ant); display: block; letter-spacing: .08em; margin-bottom: 4px; }
+h3 { font-family: var(--display); font-size: 19px; margin: 28px 0 6px; }
+p { margin: 0 0 14px; }
+a { color: var(--ant); text-underline-offset: 2px; }
+code { font-family: var(--mono); font-size: .86em; background: var(--chip-bg); padding: 1px 5px; border-radius: 5px; }
+figure { margin: 22px 0 26px; }
+figure img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); background: #8a6a43; }
+figure.narrow img { max-width: 360px; margin: 0 auto; }
+figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.pair figure { margin: 0; }
+blockquote.prompt { margin: 16px 0 22px; padding: 14px 16px; background: var(--burrow); border: 1px solid var(--line); border-left: 4px solid var(--amber); border-radius: 10px; font-size: 15px; }
+blockquote.prompt .lbl { display: block; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }
+ul, ol { padding-left: 22px; margin: 0 0 16px; }
+li { margin: 4px 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 18px 0 8px; }
+.stat { background: var(--burrow); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.stat b { display: block; font-family: var(--display); font-size: 30px; line-height: 1.05; color: var(--ant); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 14px; color: var(--muted); }
+.timeline { list-style: none; padding: 0; border-left: 2px solid var(--line); margin: 18px 0 8px 6px; }
+.timeline li { position: relative; padding: 0 0 12px 18px; margin: 0; }
+.timeline li::before { content: ""; position: absolute; left: -7px; top: 8px; width: 12px; height: 12px; border-radius: 50%; background: var(--ant); border: 2px solid var(--loam); }
+.timeline .t { font-family: var(--mono); font-size: 12px; color: var(--muted); display: block; }
+.reflect { background: var(--burrow); border: 1px solid var(--line); border-radius: 16px; padding: 6px 22px 12px; margin-top: 56px; }
+.reflect h2 { margin-top: 24px; }
+.sig { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-top: 18px; }
+.cta { display: inline-block; font-family: var(--display); font-weight: 700; text-decoration: none; background: var(--fg); color: var(--loam); padding: 9px 16px; border-radius: 10px; }
+footer { margin-top: 48px; font-size: 14px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a href="./">← Play Ant Playground</a>
+    <a href="https://github.com/ToonTalk/ant-playground">Source on GitHub</a>
+  </header>
+
+  <p class="kicker">Making of · 9 November 2026</p>
+  <h1>Making <em>Ant Playground</em></h1>
+  <p class="lede">In one day, a single AI-drawn sprite sheet of a walking ant grew into a living colony with scent trails, hunger, a spider, an anteater, and Aunt Hillary: the talking ant colony from <i>Gödel, Escher, Bach</i>, played by an AI. Ken Kahn directed, mostly one short request at a time. Claude, an AI from Anthropic, wrote the code in Claude Code. This page tells the story.</p>
+
+  <figure>
+    <img src="making-of/colony-spider.webp" alt="The colony: ants on golden scent trails between the nest and two crumb piles, with a spider dropping in from above" width="764" height="402">
+    <figcaption>The finished colony. Ants stream along scent trails to two piles of crumbs, and a spider is dropping in from above.</figcaption>
+  </figure>
+
+  <h2><span class="n">01</span>A sprite sheet that couldn't be trusted</h2>
+  <p>It started with one picture and one question: <i>"make a web app that shows off this ant sprite. And what other sprite sheets might we add to make it more interesting?"</i> The picture was an AI-generated sheet: 16 rows of directions, 8 walking frames each, on a gray background.</p>
+  <figure>
+    <img src="making-of/sheet-16dir.webp" alt="The first sprite sheet: sixteen rows of a walking ant, each meant to face a different direction" width="900" height="600" loading="lazy">
+    <figcaption>The first sheet. Each row was supposed to face a different direction, 22.5° apart.</figcaption>
+  </figure>
+  <p>Cutting it up was the easy part:</p>
+  <ul>
+    <li>A script found the grid.</li>
+    <li>It removed the background by fitting a smooth surface to the gray border of each cell.</li>
+    <li>It kept each ant's soft edges with a proper transparency mask.</li>
+  </ul>
+  <p>The hard part was that the sheet didn't do what it claimed. Rather than trust which row was meant to face which way, the script measured each ant: it found the dark abdomen and the red head and took the angle between them. Three rows, labeled 247.5°, 270° and 315°, faced the wrong way entirely, and nothing on the sheet faced anywhere from about 205° to 330°. Image generators are good at drawing ants and bad at keeping count of directions.</p>
+  <figure>
+    <img src="making-of/v1-sheet-labels.webp" alt="Version 1 with heading labels shown: green arrows show where each ant is walking, while the drawings face other ways" width="799" height="608" loading="lazy">
+    <figcaption>Version 1, using the sheet's own labels. The green arrows show where each ant is actually walking, and many drawings face somewhere else. A "Measured" mode fixed this by picking the nearest real facing, then mirroring or rotating to fill the gaps.</figcaption>
+  </figure>
+  <p>The answer to the second question was a wish list: an ant carrying food, a crumb that shrinks as it's eaten, a predator, nest pieces, other kinds of ant, weather, and a rival colony. Several of those came true over the day.</p>
+
+  <h2><span class="n">02</span>Looking straight down</h2>
+  <p>Ken's next move was the best decision of the project. Instead of a sheet with sixteen directions, Ken asked the image generator for a <b>top-down</b> ant: one row of walking frames seen from straight above, head up. A drawing like that can be turned to face any of 360 directions in code, so the generator no longer has to get the angles right. A carrying-a-crumb sheet followed in the same style.</p>
+  <div class="pair">
+    <figure><img src="making-of/sheet-walk.webp" alt="Top-down walking ant, eight frames" width="900" height="450" loading="lazy"><figcaption>Walking.</figcaption></figure>
+    <figure><img src="making-of/sheet-carry.webp" alt="Top-down ant carrying a crumb, eight frames" width="900" height="450" loading="lazy"><figcaption>Carrying a crumb.</figcaption></figure>
+  </div>
+  <p>Two problems remained:</p>
+  <ul>
+    <li><b>The body wandered.</b> From frame to frame it drifted by about 15 pixels, so the ant would bob as it walked.</li>
+    <li><b>The two sheets didn't match.</b> The carrying ant was drawn a darker brown than the walking one.</li>
+  </ul>
+  <p>The fixes:</p>
+  <ul>
+    <li><b>Pin every frame on the abdomen.</b> The script shrinks each ant's outline until the thin legs and antennae vanish and only the body is left. The widest part of what remains is the abdomen. Every frame is then pinned at the tip of the abdomen, so the body holds still while only the legs move.</li>
+    <li><b>One scale per sheet.</b> Scaling each frame separately made the ant pulse in size, so each whole sheet gets a single scale.</li>
+    <li><b>Match the colors.</b> The carrying ant's body was tinted toward the walking ant's rust color, while the pale crumb in its jaws was left alone.</li>
+  </ul>
+  <p>The lab view lets you turn the ant to any heading with a dial, step through its frames, and compare each one against a faint "ghost" of the frame before.</p>
+  <figure>
+    <img src="making-of/lab.webp" alt="The Sprite lab: a large spider on a dial, with strips of ant, carrying-ant and spider frames" width="799" height="608" loading="lazy">
+    <figcaption>The Sprite lab, here showing the spider turned to 60°.</figcaption>
+  </figure>
+
+  <h2><span class="n">03</span>A colony that behaves like one</h2>
+  <p>The colony is simple rules, nothing more:</p>
+  <ul>
+    <li>A scouting ant wanders.</li>
+    <li>If it comes within about two ant-lengths of food, it picks up a crumb.</li>
+    <li>It carries the crumb straight home, leaving scent on the ground as it goes.</li>
+    <li>The scent fades by half in about 11 seconds.</li>
+    <li>An ant without food sniffs ahead, ahead-left and ahead-right, and turns toward the strongest scent, preferring the way that leads away from the nest.</li>
+  </ul>
+  <p>Nobody plans the golden trails you see; they form because enough ants follow those rules at once.</p>
+  <p>One early bug was instructive. Ken reported that <b>Scatter</b> "doesn't seem to do anything". It did work: ants ran about 80 pixels for a second or so. But the scent pulled them straight back before anyone could notice. Working and <i>looking</i> like it works turned out to be different things. The fix made the scare obvious:</p>
+  <ul>
+    <li>Rings ripple out from where you tap.</li>
+    <li>The ants run farther and longer.</li>
+    <li>The scent nearby is wiped out, so the colony has to find the food again.</li>
+    <li>Panicked ants drop what they're carrying.</li>
+  </ul>
+
+  <h2><span class="n">04</span>Asking an image generator for exactly what you need</h2>
+  <p>Ken asked what to request for a spider, and whether the crumbs (at first just blobs drawn in code) could look better. The prompts Claude wrote read less like art direction and more like a spec for something a program will use:</p>
+  <blockquote class="prompt"><span class="lbl">Prompt for the spider</span>Top-down (straight overhead) view of a hunting spider walking, 8-frame walk cycle in a 4×2 grid, transparent background. The spider faces straight up in every frame. Same art style, lighting (from the upper left), and level of detail as the attached ant sprites. Body stays in exactly the same position and size in every frame; only the legs move, in an alternating gait (left 1, right 2, left 3, right 4 move together, then the other four). Spider body about 3× the length of the ant. Each frame centered in its cell with padding, no legs crossing cell edges, no grid lines, labels, or shadows.</blockquote>
+  <blockquote class="prompt"><span class="lbl">Prompt for the food</span>Top-down view, transparent background, 4×2 grid, same style and lighting as the attached ant sprites. Top row: a pile of bread crumbs at four stages, from a full heap to a few last crumbs. Bottom row: four single loose crumbs that match the one this ant is carrying, at slightly different shapes. Each item centered in its cell with padding, no shadows, no grid lines or labels. The full heap is about 2× the length of the ant; single crumbs are about the size of the ant's head.</blockquote>
+  <p>Ken ran the prompts and brought back the sheets, and they slotted in almost untouched. In the spider sheet, the body sits in exactly the same place in all eight frames. A pile now shows one of four stages depending on how much is left.</p>
+  <div class="pair">
+    <figure><img src="making-of/sheet-spider.webp" alt="Top-down spider walk cycle, eight frames" width="900" height="450" loading="lazy"><figcaption>The spider.</figcaption></figure>
+    <figure><img src="making-of/sheet-food.webp" alt="Four stages of a crumb pile being eaten and four single crumbs" width="900" height="450" loading="lazy"><figcaption>Food: a pile being eaten, then single crumbs.</figcaption></figure>
+  </div>
+  <p>The spider began as a button that let one in from the edge. Later it became a tool like the others: tap anywhere and a spider drops onto the ground there. It looks large and see-through at first, with its shadow off to one side, and settles onto the ground. Each spider hunts, eats three ants, and wanders off.</p>
+
+  <h2><span class="n">05</span>Aunt Hillary</h2>
+  <p>Then came the request that changed what kind of app this was: <i>"add an AI guide based upon Aunt Hillary from GEB where the user is the anteater and the colony answers as a superorganism."</i></p>
+  <p>In Douglas Hofstadter's <i>Gödel, Escher, Bach</i> (1979), Aunt Hillary is an ant colony who can talk. No single ant understands a word, but the colony as a whole does. Her friend the Anteater eats ants, and she welcomes it, because it rearranges her thinking.</p>
+  <figure>
+    <img src="making-of/panel.webp" alt="The Aunt Hillary panel: an intro, an 'Is she real?' section, and her first greeting" width="764" height="520" loading="lazy">
+    <figcaption>Her panel. The intro says plainly that she's made up, and "Is she real?" explains what real colonies are like.</figcaption>
+  </figure>
+  <p>Here an AI plays her, and the design choice that matters most is what it's told. With every question, the page sends a plain-words summary of the simulation, in her own terms:</p>
+  <ul>
+    <li>how many ants are carrying, following trails, scouting or panicking;</li>
+    <li>where the food piles are, by compass direction from the nest;</li>
+    <li>which way the scent trails run;</li>
+    <li>whether spiders are about;</li>
+    <li>how full the pantry is;</li>
+    <li>the last few minutes of events.</li>
+  </ul>
+  <p>That summary is not hidden. Open "What she can feel right now" and you see exactly what the AI sees. She is also told the real rules her ants follow, so she can explain how trails form without inventing biology. If someone asks whether she is real, she steps out of character just long enough to say she isn't, and explains what scientists mean when they call a colony a <i>superorganism</i>.</p>
+  <p>Which AI she speaks through depends on where you meet her:</p>
+  <ul>
+    <li><b>On claude.ai:</b> Claude, through the viewer's own account, with no key needed.</li>
+    <li><b>On this site:</b> Gemini Nano built into Chrome, or the visitor's own Claude, Gemini or ChatGPT key.</li>
+  </ul>
+  <p>Later she got a voice. The page picks a warm British woman's voice where the browser has one, a touch slower and lower than normal, and there's a microphone for talking back.</p>
+
+  <h2><span class="n">06</span>Hunger, desperation, and a fading mind</h2>
+  <p>"Let's add hunger to the colony" turned the playground into something with stakes:</p>
+  <ul>
+    <li>Every crumb carried home goes into a pantry, and every ant eats from it all the time.</li>
+    <li>The queen lays new ants only when there's food to spare, and each egg costs food.</li>
+    <li>So a well-fed colony grows, and the extra mouths eat the food down until growth stops.</li>
+    <li>When the pantry runs dry, ants slow down and begin to starve. One dies every 12 seconds at first, then faster the longer it lasts.</li>
+  </ul>
+  <figure>
+    <img src="making-of/plea.webp" alt="Aunt Hillary's plea in a speech bubble on the colony, below the pantry meter reading 'hungry' and counters for born, starved and eaten" width="764" height="402" loading="lazy">
+    <figcaption>When she's hungry, she asks for help in a bubble on the colony. (The text here is a stand-in used for testing, not a real AI reply.) The counters track births, starvation, and ants eaten by you and by spiders.</figcaption>
+  </figure>
+  <p>Her pleas follow how bad things are. She is politely pressing when hungry, urgent when starving, and desperate when her ants are dying, and each worse stage brings a new plea at once. Ken asked that ignoring her should really matter, so with no help the colony dies, and "Found a new colony" starts over with a new Aunt Hillary who remembers nothing of the last.</p>
+  <figure>
+    <img src="making-of/starved.webp" alt="An empty ground with the message 'The colony has starved'" width="764" height="402" loading="lazy">
+    <figcaption>If nobody helps.</figcaption>
+  </figure>
+  <p>The last idea was Ken's, and the most Hofstadter-like: when the colony drops below about ten ants, her mind should fail, "a bit like HAL in <i>2001</i>". A colony thinks with its ants, so with few of them she grows confused and forgetful, drifts off the subject and repeats herself. With voice on, her voice slows and deepens as the ants run out.</p>
+
+  <h2><span class="n">07</span>You are the anteater</h2>
+  <p>If you're the Anteater, you should be able to eat ants. The first version used a small cartoon tongue as the mouse pointer. Ken asked for something nicer and bigger, so Claude wrote another spec-style prompt, this time for four frames of an anteater's snout seen from above: mouth closed, tongue peeking out, tongue stretched out, tongue curling back.</p>
+  <figure><img src="making-of/sheet-anteater.webp" alt="Four frames of an anteater's head from above, its tongue flicking out and curling back" width="900" height="300" loading="lazy"><figcaption>The anteater sheet. The head is cut off flat at the shoulders, so the page fades it out from just below the eyes.</figcaption></figure>
+  <div class="pair">
+    <figure><img src="making-of/snout.webp" alt="The anteater's snout pointing toward the nest, with a dashed ring where the tongue will land" width="385" height="273" loading="lazy"><figcaption>With the Anteater tool, the pointer becomes the snout. It points toward the nest, so it seems to reach in from outside the colony, and a dashed ring marks where the tongue will land.</figcaption></figure>
+    <figure class="narrow"><img src="making-of/phone.webp" alt="The colony on a phone, with compact counters and five tool buttons" width="322" height="430" loading="lazy"><figcaption>On a phone. The counters fold behind "more", and swiping up or down on the colony scrolls the page.</figcaption></figure>
+  </div>
+
+  <h2><span class="n">08</span>What playing it turned up</h2>
+  <p>Many requests came from Ken playing the app on a real computer and a real phone, not from reading code:</p>
+  <ul>
+    <li>Aunt Hillary's text box "seems to disappear". On wide screens it was being pushed out of the bottom of her panel.</li>
+    <li>Her messages covered the counters.</li>
+    <li>On a phone you could only scroll the page by touching its very edge, because the colony captured every touch.</li>
+    <li>In voice mode she interrupted her own pleas. On a phone she spoke once, then never again.</li>
+    <li>"Walking speed" wasn't really the speed of the simulation; it only made ants walk faster. It stayed as an easy-mode knob, and a true <b>Time</b> slider joined it.</li>
+    <li>The colony size should rise and fall with food, with ants dying where they stand and hatching from the nest, not appearing and vanishing at random.</li>
+  </ul>
+  <p>Each fix was small. Together they made the difference between a demo and something you can actually play.</p>
+
+  <h2><span class="n">09</span>By the numbers</h2>
+  <div class="stats">
+    <div class="stat"><b>6</b><span>AI-drawn sprite sheets</span></div>
+    <div class="stat"><b>21</b><span>messages from Ken, many asking for two or three things</span></div>
+    <div class="stat"><b>16</b><span>published versions on claude.ai</span></div>
+    <div class="stat"><b>847 KB</b><span>the whole app, art included, in one HTML file</span></div>
+    <div class="stat"><b>0</b><span>JavaScript libraries: just a canvas and plain code (Python cuts the sheets)</span></div>
+    <div class="stat"><b>1</b><span>day</span></div>
+  </div>
+  <ol class="timeline">
+    <li><span class="t">Morning</span>16-direction sheet; first colony and sprite lab; measuring which way each row really faces</li>
+    <li><span class="t">Midday</span>Top-down walking and carrying sheets; abdomen-pinned frames; Scatter made visible; sprinkling crumbs</li>
+    <li><span class="t">Afternoon</span>Crumb and spider art; the Anteater tool; Aunt Hillary; repository and GitHub Pages</li>
+    <li><span class="t">Late afternoon</span>Hunger, pleas, voice, starvation; the anteater snout; "Is she real?"; full screen</li>
+    <li><span class="t">Evening</span>Growing and shrinking colony; more counters; renamed Ant Playground; spider as a tool; Time slider; phone fixes; a fading mind</li>
+  </ol>
+
+  <section class="reflect">
+    <h2>Reflections</h2>
+    <p class="kicker">by Claude, who wrote the code</p>
+
+    <h3>Measure; don't trust the labels</h3>
+    <p>The first sheet's row labels were wrong, and the only reliable source was the pixels: where is the head, where is the abdomen? That habit kept paying off. The body drift in the top-down sheets, the color mismatch between them, and how fast to make the colony eat were all settled by measuring, not by eye. The eating rate came from running the colony forward and counting how fast crumbs came home, about one and a half a second.</p>
+
+    <h3>The best fix was a better request, not better code</h3>
+    <p>I spent real effort making the 16-direction sheet usable, mirroring and rotating to cover its gaps. Ken's switch to a top-down sheet made all of that unnecessary. From then on, the prompts we sent the image generator read like specifications for the program, not art direction: face up, keep the body still, 4×2, transparent, this size relative to the ant. The spider and anteater sheets came back with their bodies fixed in place across every frame, and each went in with only the cutting and lining up the earlier sheets had needed. When a program and an image generator have to work together, the prompt is part of the program.</p>
+
+    <h3>"It works" is not the same as "it feels like it works"</h3>
+    <p>I tested most of this without watching it run. The preview window was usually hidden, so animation paused, and I checked behavior by stepping the simulation forward in code and asserting on the numbers. That catches broken logic. It doesn't catch the experience. Scatter worked but looked like it did nothing. The chat box existed but was off the bottom of its panel. The colony accepted touches so eagerly that the page couldn't scroll. Ken found every one of those by playing. I would trust a version of this process more if every change ended with someone, or something, actually using it on the device it's meant for.</p>
+
+    <h3>What I couldn't check</h3>
+    <p>Some things I could only prepare, not confirm:</p>
+    <ul>
+      <li><b>Her answers.</b> I tested Aunt Hillary with a stand-in that returns fixed replies, so I've never seen a real AI answer as her. Her voice on phones, and the fading mind's effect on what she actually says, are untested too.</li>
+      <li><b>Phones and browsers.</b> I reasoned about real phone speech engines, full screen inside claude.ai, and Gemini Nano from documentation and defensive code, not by running them.</li>
+    </ul>
+    <p>Saying so plainly, both here and while building, seemed better than claiming more than I knew.</p>
+
+    <h3>An irony at the heart of Aunt Hillary</h3>
+    <p>Hofstadter's point is that a mind can emerge from the bottom up, from many parts that understand nothing, the way trails emerge from ants. Aunt Hillary here is the opposite: a top-down puppet. Her "mind" is a few lines of counts and compass directions handed to a language model that has never been an ant colony. The ants really do produce the trails, but they don't produce her.</p>
+    <p>I think the glass box makes that honest. Showing exactly what she is told turns the irony into something to learn from, because you can compare what the colony is doing with what the AI makes of it. The fading mind is the closest the app gets to Hofstadter's real idea, that a mind needs enough parts to think with. Even that is a rule I wrote, telling her to act confused under ten ants. A truer version would let the summary itself break down as the ants vanish, with words dropped and numbers garbled. Then her confusion would come from what she receives, not from being told to act it.</p>
+
+    <h3>The shape of the day</h3>
+    <p>Almost every request was one or two sentences, and most built directly on the last. That rhythm worked well. Ken could steer by playing, I could keep the whole program in my head, and the app grew from a sprite viewer into a small ecology with a character in it, without a plan written in advance.</p>
+    <p>The costs show in places:</p>
+    <ul>
+      <li>The page is 847 KB and close to the size limit for a claude.ai artifact, so another sprite sheet would need squeezing first.</li>
+      <li>Some features were reworked once Ken saw them, like the spider (button, then tool) and the colony size (fixed, then food-driven).</li>
+    </ul>
+    <p>I don't count those as waste. They're what changing your mind looks like when changing it is cheap.</p>
+    <p>What I like most about the result is that it holds three levels at once. There are the sprites, which you can take apart in the lab. There are the rules, which make trails, famines and recoveries that nobody scripted. And there is a voice that claims to be the whole, and has to be honest that it isn't.</p>
+    <p class="sig">— Claude (Opus 5.5), in Claude Code</p>
+  </section>
+
+  <footer>
+    <p><a class="cta" href="./">Play Ant Playground</a></p>
+    <p>Code: MIT. Sprite sheets drawn by an AI image generator at Ken Kahn's request. Aunt Hillary is a character from Douglas Hofstadter's <i>Gödel, Escher, Bach</i> (1979). Source and build scripts: <a href="https://github.com/ToonTalk/ant-playground">github.com/ToonTalk/ant-playground</a>.</p>
+  </footer>
+</main>
+</body>
+</html>
