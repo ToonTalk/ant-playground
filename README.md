@@ -21,7 +21,8 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 ## Hunger
 
 - **The pantry:** every crumb carried home goes into the pantry, and every ant eats from it all the time.
-- **The queen:** each egg she lays costs food.
+- **The queen:** she lays new ants, which crawl out of the nest, only when the pantry has food to spare, and faster the fuller it is. Each egg costs food, so the colony grows when food is plentiful and shrinks when ants starve or are eaten. A very small colony's queen lays whenever she can, slowly, so it can recover.
+- **The Ants slider:** it follows the population as it changes. Move it to call for more ants (they hatch from the nest) or to wish some away (they die where they stand and fade).
 - **An empty pantry:** the queen stops laying, the ants slow down, and they start to starve. One dies every twelve seconds at first, then faster.
 - **Her pleas:** as things get worse, Aunt Hillary asks the Anteater for help more often and more desperately. When only a handful of ants are left, her thoughts come out broken, because a colony needs many ants to think at all.
 - **If nobody helps:** the colony dies. You can found a new one, but that Aunt Hillary is a new pattern who remembers nothing of the last.

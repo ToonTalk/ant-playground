@@ -304,8 +304,8 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 
     <div class="notebook">
       <div class="field">
-        <label for="n-ants">Ants <output id="o-ants">40</output></label>
-        <input id="n-ants" type="range" min="1" max="160" value="40">
+        <label for="n-ants">Ants (moves as the colony grows and shrinks) <output id="o-ants">40</output></label>
+        <input id="n-ants" type="range" min="0" max="160" value="40">
       </div>
       <div class="field">
         <label for="n-speed">Walking speed <output id="o-speed">1.0×</output></label>
@@ -330,7 +330,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <button class="btn ghost" id="b-clear">New ground</button>
         </div>
       </div>
-      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. The queen lays a new ant every second and a half to replace any that are eaten, and each egg costs food. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help.</p>
+      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help.</p>
     </div>
   </section>
 
@@ -527,7 +527,20 @@ let nest = { fx: 0.24, fy: 0.62 };
 let crumbs = [];
 let ants = [];
 let delivered = 0;
-let antTarget = 40, hatchT = 0;            // the queen lays until the colony is back to size
+// population: the queen lays when there's food to spare; ants die of hunger, spiders and anteaters
+const MAX_ANTS = 160, LAY_FROM = 0.35;      // she lays freely once the pantry is over 35% full
+let hatchT = 0, wantBorn = 0, wantGone = 0, sliderT = 0;   // wantBorn/wantGone: what the Ants slider asked for
+let bodies = [];                            // dead ants, fading where they fell
+let famineFrom = 0;                         // how many ants there were when the pantry ran dry
+let lifeLog = [];                           // births and deaths over the last two minutes
+function logLife(kind) { lifeLog.push({ t: simTime, kind }); lifeLog = lifeLog.filter(e => simTime - e.t < 120); }
+function hatch() { const a = makeAnt(); a.born = simTime; ants.push(a); logLife("born"); }
+function dies(i) {                          // an ant dies where it stands and its body slowly fades
+  const a = ants[i]; ants.splice(i, 1);
+  bodies.push({ x: a.x, y: a.y, dir: a.dir, frame: Math.floor(a.walked / (STRIDE * TILE * antScale())) % 8, carrying: a.carrying, t: 0 });
+  if (a.carrying) addCrumb(a.x, a.y, 1, 0);
+  logLife("died");
+}
 // hunger: every crumb carried home goes in the pantry; every ant eats from it all the time
 const PANTRY_MAX = 100, EAT_PER_ANT = 0.022, EGG_COST = 2;
 let pantry = 70, starveT = 0, starvingFor = 0, starved = 0, colonyDead = false;
@@ -593,15 +606,15 @@ function drawNestOnGround() {
 function makeAnt() {
   const n = nestXY(), a = R() * 360;
   return {
-    x: n.x + Math.cos(a) * 10, y: n.y + Math.sin(a) * 8,
+    x: n.x + Math.cos(a) * 4, y: n.y + Math.sin(a) * 3,
     dir: a, turn: 0, walked: R() * 40, pace: 0.85 + R() * 0.3,
     carrying: false, flee: 0, fx: 0, fy: 0
   };
 }
-function setAntCount(n) {
-  antTarget = n;
+function setAntCount(n) {                  // instant: for a new colony, not for the slider
   while (ants.length < n) ants.push(makeAnt());
   ants.length = n;
+  wantBorn = wantGone = 0;
 }
 function addCrumb(x, y, amount = 45, fall = 1) {
   const Rc = rng((x * 73856093) ^ (y * 19349663));
@@ -689,7 +702,7 @@ function stepSpider(dt) {
     if (s.pause > 0) { s.pause -= dt; speed = 0; }
     else speed = (d < 120 ? 125 : 38) * pace;
     if (d < mouth + 6) {
-      ants.splice(ants.indexOf(prey), 1);
+      ants.splice(ants.indexOf(prey), 1); logLife("eaten");
       if (prey.carrying) addCrumb(prey.x, prey.y, 1, 0);
       s.rest = 2.4; s.meals++; spiderEaten++;
       note(`The spider caught one of my ants ${where(s.x, s.y)}.`);
@@ -743,7 +756,7 @@ function lick(x, y) {
   let n = 0;
   for (let i = ants.length - 1; i >= 0; i--) {
     const a = ants[i];
-    if (Math.hypot(a.x - x, a.y - y) < reach) { if (a.carrying) addCrumb(a.x, a.y, 1, 0); ants.splice(i, 1); n++; }
+    if (Math.hypot(a.x - x, a.y - y) < reach) { if (a.carrying) addCrumb(a.x, a.y, 1, 0); ants.splice(i, 1); n++; logLife("eaten"); }
   }
   for (const a of ants) if (Math.hypot(a.x - x, a.y - y) < 90) { a.flee = Math.max(a.flee, 0.9); a.fx = x; a.fy = y; }
   youEaten += n;
@@ -776,17 +789,36 @@ function step(dt) {
   const reach = 4 + TILE * antScale() * 0.2;   // mouth to crumb center
   simTime += dt;
   pantry = Math.max(0, pantry - ants.length * EAT_PER_ANT * dt);
-  if (ants.length < antTarget && pantry >= EGG_COST && !colonyDead) {     // eggs cost food: no food, no new ants
-    hatchT += dt;
-    if (hatchT > 1.5) { hatchT = 0; ants.push(makeAnt()); pantry -= EGG_COST; }
-  } else hatchT = 0;
+  if (!colonyDead) {
+    // the Ants slider: new ants pour out of the nest, or ants die where they are
+    if (wantBorn > 0 || wantGone > 0) {
+      sliderT += dt;
+      while (sliderT > 0.1) {
+        sliderT -= 0.1;
+        if (wantBorn > 0 && ants.length < MAX_ANTS) { hatch(); wantBorn--; }
+        else if (wantGone > 0 && ants.length) { dies((R() * ants.length) | 0); wantGone--; }
+        else { wantBorn = wantGone = 0; break; }
+      }
+    }
+    // the queen: eggs cost food, so she lays only with food to spare, faster the fuller the pantry.
+    // A tiny colony's queen lays whenever she can, slowly, or it would never recover.
+    const f = pantry / PANTRY_MAX;
+    const perSec = ants.length < 5 ? (pantry >= EGG_COST ? 1 / 3 : 0) : f > LAY_FROM ? (f - LAY_FROM) / (1 - LAY_FROM) / 1.2 : 0;
+    if (perSec > 0 && ants.length < MAX_ANTS) {
+      hatchT += dt * perSec;
+      if (hatchT >= 1) { hatchT = 0; hatch(); pantry -= EGG_COST; }
+    } else hatchT = 0;
+  }
+  for (const b of bodies) b.t += dt;
+  bodies = bodies.filter(b => b.t < 8);
   // an empty pantry costs ants, slowly at first, then faster the longer it lasts; with no help the colony dies
   if (pantry <= 0 && ants.length && !colonyDead) {
+    if (starvingFor === 0) famineFrom = ants.length;
     starvingFor += dt; starveT += dt;
     if (starveT > Math.max(3, 12 - starvingFor / 10)) {
       starveT = 0;
       let i = ants.findIndex(a => !a.carrying); if (i < 0) i = 0;
-      ants.splice(i, 1); starved++;
+      dies(i); starved++;
       note(ants.length ? `One of my ants starved (${starved} so far).` : "My last ant starved.");
     }
   } else if (pantry > 5) { starveT = 0; starvingFor = 0; }
@@ -897,9 +929,17 @@ function render() {
   const s = antScale();
   const stride = STRIDE * TILE * s;
   let carrying = 0;
-  for (const a of ants) drawShadow(g, a.x, a.y, a.dir, s);
+  // the dead: darkened, still, fading away over eight seconds
+  if (bodies.length) {
+    g.save(); g.filter = "grayscale(0.85) brightness(0.5)";
+    for (const b of bodies) drawAnt(g, atlas, b.x, b.y, b.dir, b.frame, s * 0.95, b.carrying, 0.85 * Math.min(1, (8 - b.t) / 3));
+    g.restore();
+  }
+  // newborns grow to full size as they leave the nest
+  const grow = a => a.born === undefined ? 1 : Math.min(1, 0.35 + (simTime - a.born) / 0.9);
+  for (const a of ants) drawShadow(g, a.x, a.y, a.dir, s * grow(a));
   for (const a of ants) {
-    drawAnt(g, atlas, a.x, a.y, a.dir, Math.floor(a.walked / stride) % 8, s, a.carrying);
+    drawAnt(g, atlas, a.x, a.y, a.dir, Math.floor(a.walked / stride) % 8, s * grow(a), a.carrying);
     if (a.carrying) carrying++;
   }
   if (spider) {
@@ -910,6 +950,7 @@ function render() {
   drawSnout(g);
   document.getElementById("hud-carry").textContent = carrying;
   document.getElementById("hud-ants").textContent = ants.length;
+  showPopulation();
   const hu = hunger(), bar = document.getElementById("hud-pantry");
   bar.style.width = Math.round(hu.f * 100) + "%";
   bar.classList.toggle("low", hu.f < 0.15);
@@ -1129,7 +1170,23 @@ $("tool-lead").onclick = () => setTool("lead");
 $("tool-scare").onclick = () => setTool("scare");
 $("tool-eat").onclick = () => setTool("eat");
 $("b-spider").onclick = releaseSpider;
-$("n-ants").oninput = e => { setAntCount(+e.target.value); $("o-ants").textContent = e.target.value; };
+// the Ants slider shows the population as it rises and falls; moving it hatches ants or lets some die
+let sliderHeld = false, sliderUntil = 0;
+$("n-ants").oninput = e => {
+  const want = +e.target.value;
+  wantBorn = Math.max(0, want - ants.length); wantGone = Math.max(0, ants.length - want);
+  $("o-ants").textContent = want; sliderUntil = performance.now() + 1500;
+};
+$("n-ants").addEventListener("pointerdown", () => { sliderHeld = true; });
+addEventListener("pointerup", () => { if (sliderHeld) { sliderHeld = false; sliderUntil = performance.now() + 1500; } });
+$("n-ants").addEventListener("change", () => {
+  const n = +$("n-ants").value, d = n - ants.length;
+  if (d) note(d > 0 ? `The Anteater called for ${d} more ants, and they're hatching from the nest.` : `The Anteater wished away ${-d} of my ants, and they died where they stood.`);
+});
+function showPopulation() {
+  if (sliderHeld || performance.now() < sliderUntil || wantBorn || wantGone) return;
+  $("n-ants").value = ants.length; $("o-ants").textContent = ants.length;
+}
 $("n-speed").oninput = e => { speedMul = +e.target.value; $("o-speed").textContent = speedMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("n-size").oninput = e => { sizeMul = +e.target.value; $("o-size").textContent = sizeMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("c-trails").onchange = e => { showTrails = e.target.checked; };
@@ -1202,7 +1259,10 @@ function sense() {
     else scouts++;
   }
   const L = [];
-  L.push(`Ants: ${ants.length}. Full size: ${antTarget}.${ants.length < antTarget ? " The queen is laying new ants at the nest to make up the loss." : ""}`);
+  const last = k => lifeLog.filter(e => e.kind === k && simTime - e.t < 60).length;
+  const born = last("born"), died = last("died"), eaten = last("eaten"), net = born - died - eaten;
+  L.push(`Ants: ${ants.length}. In the last minute ${born} hatched, ${died} died and ${eaten} were eaten, so the colony is ${net > 1 ? "growing" : net < -1 ? "shrinking" : "holding steady"}.` +
+    (pantry / PANTRY_MAX > LAY_FROM ? " There's food to spare, so the queen is laying." : " Food is short, so the queen has nearly stopped laying."));
   L.push(`Teams right now: ${carriers} carrying food home, ${followers} following a scent trail, ${scouts} scouting at random, ${panicking} running in alarm.`);
   L.push(`Crumbs brought home so far: ${delivered}.`);
   const hu = hunger();
@@ -1255,7 +1315,7 @@ How your ants really work on this page. These are the true rules; when asked, de
 - A scouting ant wanders at random. If it comes within about two ant-lengths of food, it walks over and picks up a crumb.
 - An ant carrying a crumb walks straight home to the nest and leaves scent behind it. Scent fades to half in about 11 seconds.
 - An ant without food sniffs ahead, ahead-left and ahead-right, and turns toward the strongest scent, preferring the way that leads away from the nest. That is how a trail forms; nobody plans it.
-- The queen lays a new ant at the nest every second and a half until the colony is back to full size. Each egg costs food from the pantry.
+- The queen lays new ants at the nest when the pantry has food to spare (over about a third full), faster the fuller it is, and each egg costs food. So the colony grows when food is plentiful and shrinks when ants starve or are eaten. The Ants slider lets the Anteater call for more ants (they hatch from the nest) or wish some away (they die where they stand).
 - Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and they begin to starve to death, one every twelve seconds at first and faster the longer it lasts. With no help, the whole colony dies, and you with it.
 - Your composure follows your hunger: witty and content when fed; polite but pressing when hungry; urgent when starving; desperate when your ants are dying; and when only a handful are left, your thoughts come out faint and broken, because a colony needs many ants to think at all. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
 - The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), and Anteater (licks up ants). "Let in a spider" brings a hunting spider. Ants that see it within about two ant-lengths run; it eats up to three ants and then wanders off. Scatter near the spider frightens it away.
@@ -1646,7 +1706,7 @@ let pleaded = false, lastPlea = -1e9, lastLevel = 0;
 // how desperate she is: 0 fine, 1 hungry, 2 starving, 3 ants dying, 4 nearly gone
 function desperation() {
   const h = hunger();
-  if (h.word === "starving") return ants.length <= 8 ? 4 : starved >= Math.max(4, antTarget * 0.25) ? 3 : 2;
+  if (h.word === "starving") return ants.length <= 8 ? 4 : starved >= Math.max(4, famineFrom * 0.25) ? 3 : 2;
   return h.word === "hungry" ? 1 : 0;
 }
 const WAIT = [Infinity, 90, 45, 30, 20];   // seconds between pleas at each level
@@ -1676,7 +1736,7 @@ function refound() {
   $("dead").style.display = "none";
 }
 $("b-refound").onclick = () => {
-  refound(); setAntCount(antTarget); chat.length = 0;
+  refound(); setAntCount(40); chat.length = 0;
   note("A new colony was founded at the nest.");
   addNote("A new colony has started at the nest. This Aunt Hillary is a new pattern, so she remembers nothing of the last one.");
 };
