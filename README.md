@@ -26,6 +26,7 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 - **The Ants slider:** it follows the population as it changes. Move it to call for more ants (they hatch from the nest) or to wish some away (they die where they stand and fade).
 - **An empty pantry:** the queen stops laying, the ants slow down, and they start to starve. One dies every twelve seconds at first, then faster.
 - **Her pleas:** as things get worse, Aunt Hillary asks the Anteater for help more often and more desperately. When only a handful of ants are left, her thoughts come out broken, because a colony needs many ants to think at all.
+- **A fading mind:** a colony thinks with its ants. Below about 10 ants, Aunt Hillary grows confused and forgetful whatever the cause, and with voice on, her voice slows and deepens like a machine running down. Below 5, only a few broken words get through.
 - **If nobody helps:** the colony dies. You can found a new one, but that Aunt Hillary is a new pattern who remembers nothing of the last.
 
 ## Voice

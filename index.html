@@ -59,10 +59,13 @@ h1 em { font-style: normal; color: var(--ant); }
 
 /* colony */
 .stage { position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #8a6a43; }
-#world { display: block; width: 100%; height: clamp(360px, 66vh, 720px); cursor: crosshair; touch-action: manipulation; }
+/* touch: a swipe up or down on the colony scrolls the page; sideways drags and taps reach the tools.
+   Lead needs every direction, and full screen has nothing to scroll, so those take all gestures. */
+#world { display: block; width: 100%; height: clamp(360px, 66vh, 720px); cursor: crosshair; touch-action: pan-y; }
 #world.lead { touch-action: none; cursor: grab; }
-#world.draw { touch-action: none; }
+.colony-row.full #world { touch-action: none; }
 .tip { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); font-size: 13px; color: #f3e7d3; background: rgba(26, 21, 17, .6); padding: 4px 12px; border-radius: 999px; pointer-events: none; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { .tip { white-space: normal; text-align: center; border-radius: 12px; width: max-content; font-size: 12px; } }
 .hud { position: absolute; left: 12px; top: 12px; right: 12px; display: grid; gap: 6px; justify-items: start; pointer-events: none; }
 .hud-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .hud-row.small .pill { font-size: 11px; padding: 3px 8px; background: rgba(26, 21, 17, .62); }
@@ -1180,14 +1183,22 @@ function setTool(t) {
   tool = t;
   for (const k of ["crumb", "lead", "scare", "eat", "spider"]) $("tool-" + k).setAttribute("aria-pressed", String(k === t));
   world.classList.toggle("lead", t === "lead");
-  world.classList.toggle("draw", t === "crumb" || t === "eat");
-  $("tip").textContent = TIPS[t];
+  $("tip").textContent = tipFor(t);
   setCursor();
 }
+const COARSE = matchMedia("(pointer: coarse)").matches;   // a touch screen
+const TOUCH_TIPS = {   // shorter, and they say how to scroll the page
+  crumb: "Tap to drop a crumb, or drag sideways to sprinkle. Swipe up or down to scroll.",
+  lead: "Hold and drag: nearby ants follow. To scroll, swipe outside the colony.",
+  scare: "Tap near ants to scare them. Swipe up or down to scroll.",
+  eat: "Tap or drag sideways to lick up ants. Swipe up or down to scroll.",
+  spider: "Tap to drop a spider. It eats three ants, then leaves. Swipe up or down to scroll.",
+};
+const tipFor = t => (COARSE && !isFull() ? TOUCH_TIPS : TIPS)[t];
 let tipTimer = 0;
 function flashTip(msg) {
   $("tip").textContent = msg; clearTimeout(tipTimer);
-  tipTimer = setTimeout(() => { $("tip").textContent = TIPS[tool]; }, 2500);
+  tipTimer = setTimeout(() => { $("tip").textContent = tipFor(tool); }, 2500);
 }
 const TIPS = {
   crumb: "Tap the ground to drop a crumb, or drag to sprinkle a line of them",
@@ -1246,8 +1257,18 @@ $("c-ghost").onchange = e => { labGhost = e.target.checked; };
 
 function capture(e) { try { world.setPointerCapture(e.pointerId); } catch {} }
 function localXY(e) { const b = world.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; }
+// On touch screens nothing happens until we know the finger isn't scrolling the page: a tap acts when
+// the finger lifts, and a sideways drag acts as soon as it moves. If the browser takes the gesture as a
+// scroll, it sends pointercancel and nothing is dropped.
+let pending = null;
+const scrollable = e => e.pointerType === "touch" && tool !== "lead" && !isFull();
 world.addEventListener("pointerdown", e => {
   const p = localXY(e);
+  pointer.x = p.x; pointer.y = p.y;
+  if (scrollable(e)) { pending = { p, id: e.pointerId }; return; }
+  press(p, e);
+});
+function press(p, e) {
   pointer = { ...p, down: true };
   if (tool === "crumb") {
     capture(e);
@@ -1263,7 +1284,7 @@ world.addEventListener("pointerdown", e => {
     capture(e);
   }
   setCursor();
-});
+}
 let lastDrop = null;
 function dropAt(p, amount) {
   const n = nestXY();
@@ -1271,7 +1292,13 @@ function dropAt(p, amount) {
   addCrumb(p.x, p.y, amount); lastDrop = p;
 }
 world.addEventListener("pointermove", e => {
-  const p = localXY(e); pointer.x = p.x; pointer.y = p.y;
+  const p = localXY(e);
+  if (pending && e.pointerId === pending.id) {
+    if (Math.hypot(p.x - pending.p.x, p.y - pending.p.y) < 10) return;
+    const start = pending.p; pending = null;
+    press(start, e);                 // a sideways drag: start it where the finger went down
+  }
+  pointer.x = p.x; pointer.y = p.y;
   if (tool === "crumb" && pointer.down && lastDrop && Math.hypot(p.x - lastDrop.x, p.y - lastDrop.y) > 20) dropAt(p, 6);   // sprinkle
   if (tool === "eat" && pointer.down && lastDrop && Math.hypot(p.x - lastDrop.x, p.y - lastDrop.y) > 14) { lick(p.x, p.y); lastDrop = p; }
 });
@@ -1279,8 +1306,11 @@ const up = () => {
   if (pointer.down && lastDrop && tool === "crumb") note(`The Anteater dropped food ${where(lastDrop.x, lastDrop.y)}.`);
   pointer.down = false; lastDrop = null; endLick(); setCursor();
 };
-world.addEventListener("pointerup", up);
-world.addEventListener("pointercancel", up);
+world.addEventListener("pointerup", e => {
+  if (pending && e.pointerId === pending.id) { const start = pending.p; pending = null; press(start, e); }   // a tap
+  up();
+});
+world.addEventListener("pointercancel", () => { pending = null; up(); });   // the page scrolled instead
 
 // ---------- Aunt Hillary: an AI that speaks for the whole colony ----------
 // What the colony "feels": a plain-words summary of the simulation, sent with every question.
@@ -1327,6 +1357,7 @@ function sense() {
   for (const sp of spiders) L.push(`Danger: a spider is ${sp.drop ? "dropping onto the ground" : sp.rest > 0 && sp.meals ? "eating one of my ants" : sp.mode === "leave" ? "leaving" : "hunting"} ${where(Math.max(0, Math.min(W, sp.x)), Math.max(0, Math.min(H, sp.y)))}.`);
   if (!spiders.length) L.push("Danger: no spiders about.");
   L.push(`Eaten so far: ${youEaten} by the Anteater, ${spiderEaten} by spiders.`);
+  L.push(`My mind: ${mind()} (${ants.length} ants to think with).`);
   if (paused) L.push("Time is standing still (the Anteater pressed Pause).");
   const recent = events.filter(e => simTime - e.t < 180).slice(-10);
   if (recent.length) {
@@ -1352,6 +1383,7 @@ How your ants really work on this page. These are the true rules; when asked, de
 - An ant without food sniffs ahead, ahead-left and ahead-right, and turns toward the strongest scent, preferring the way that leads away from the nest. That is how a trail forms; nobody plans it.
 - The queen lays new ants at the nest when the pantry has food to spare (over about a third full), faster the fuller it is, and each egg costs food. So the colony grows when food is plentiful and shrinks when ants starve or are eaten. The Ants slider lets the Anteater call for more ants (they hatch from the nest) or wish some away (they die where they stand).
 - Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and they begin to starve to death, one every twelve seconds at first and faster the longer it lasts. With no help, the whole colony dies, and you with it.
+- Your mind depends on how many ants you have to think with; it's given under WHAT YOU FEEL as "My mind". Clear: your usual self. A little foggy: you lose a word now and then and are slower to follow. Failing (under 10 ants): you grow confused and forgetful, drift off the subject, repeat yourself, mix up words, ask what you were saying, and may hum a few notes of an old tune or recall something from long ago, a bit like a great computer winding down. Almost gone (under 5 ants): only a few slow, broken words get through, trailing off. This happens whatever the reason the ants were lost. Never quote song lyrics or lines from films; use your own words.
 - Your composure follows your hunger: witty and content when fed; polite but pressing when hungry; urgent when starving; desperate when your ants are dying; and when only a handful are left, your thoughts come out faint and broken, because a colony needs many ants to think at all. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
 - The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), Anteater (licks up ants), and Spider (drops a hunting spider wherever the Anteater taps, up to three at once). Ants that see a spider within about two ant-lengths run; each spider eats three ants and then wanders off. Scatter near a spider frightens it away.
 
@@ -1651,23 +1683,54 @@ function fillVoicePicker() {
   const cur = currentVoice(); if (cur) sel.value = cur.name;
 }
 const plain = t => t.replace(/\*\*|__|[*_`#>]/g, "").replace(/^\s*[-•]\s+/gm, "").replace(/\s+/g, " ").trim();
+// Phones are fussy about speech, so:
+// - speaking straight after cancel() is silently dropped on some, so wait a moment after cancelling;
+// - resume() first, in case the engine got stuck paused;
+// - keep each utterance referenced until it ends (Chrome may never fire onend for a forgotten one);
+// - don't trust speechSynthesis.speaking (it can stay true forever): keep our own flag, with a time limit.
+let talking = false, talkTimer = 0;
+const live = [];
+function doneTalking() { talking = false; clearTimeout(talkTimer); live.length = 0; $("g-voice").classList.remove("speaking"); }
 // interrupt: true when answering the Anteater (cut off whatever she was saying); her own pleas queue instead
 function say(text, interrupt = true) {
   if (!tts || !voice.on || !text) return;
-  if (interrupt) tts.cancel();
-  const v = currentVoice(), t = plain(text);
-  // one sentence at a time: Chrome cuts long utterances off
-  const parts = t.match(/[^.!?…]+[.!?…]+["”’)]*\s*|[^.!?…]+$/g) || [t];
-  parts.forEach((p, i) => {
-    const u = new SpeechSynthesisUtterance(p.trim());
-    if (v) { u.voice = v; u.lang = v.lang; }
-    u.rate = 0.92; u.pitch = 0.92;      // a touch slower and lower: unhurried, older
-    if (i === 0) u.onstart = () => $("g-voice").classList.add("speaking");
-    if (i === parts.length - 1) u.onend = u.onerror = () => $("g-voice").classList.remove("speaking");
-    tts.speak(u);
-  });
+  const t = plain(text);
+  const go = () => {
+    try { tts.resume(); } catch {}
+    const v = currentVoice();
+    // one sentence at a time: Chrome cuts long utterances off
+    const parts = t.match(/[^.!?…]+[.!?…]+["”’)]*\s*|[^.!?…]+$/g) || [t];
+    parts.forEach((p, i) => {
+      const u = new SpeechSynthesisUtterance(p.trim());
+      if (v) { u.voice = v; u.lang = v.lang; }
+      // a touch slower and lower than usual: unhurried, older. Under 10 ants it slows and deepens further,
+      // like a machine running down.
+      const k = Math.min(1, ants.length / 10);
+      u.rate = 0.92 * (0.6 + 0.4 * k); u.pitch = 0.92 * (0.5 + 0.5 * k);
+      if (i === 0) u.onstart = () => $("g-voice").classList.add("speaking");
+      if (i === parts.length - 1) u.onend = doneTalking;
+      u.onerror = e => { if (e.error !== "interrupted" && e.error !== "canceled") doneTalking(); };
+      live.push(u);
+      tts.speak(u);
+    });
+    talking = true; clearTimeout(talkTimer);
+    talkTimer = setTimeout(doneTalking, (t.length / 11 + 4) * 1000);   // in case onend never comes
+  };
+  if (interrupt && (talking || tts.speaking || tts.pending)) { tts.cancel(); doneTalking(); setTimeout(go, 200); }
+  else go();
 }
-function hush() { if (tts) { tts.cancel(); $("g-voice").classList.remove("speaking"); } }
+function hush() { if (tts) { tts.cancel(); doneTalking(); } }
+// Some phones only allow speech that a tap started; one silent word during a tap unlocks it for later
+let unlocked = false;
+function unlockSpeech() {
+  if (!tts || !voice.on) return;
+  try { tts.resume(); } catch {}
+  if (unlocked) return;
+  unlocked = true;
+  const u = new SpeechSynthesisUtterance(" "); u.volume = 0; live.push(u); tts.speak(u);
+}
+addEventListener("pointerdown", unlockSpeech, true);
+addEventListener("keydown", unlockSpeech, true);
 const lastWords = () => [...document.querySelectorAll(".msg.her:not(.err):not(.thinking) .body")].at(-1)?.textContent || "";
 function showVoice() {
   $("g-voice").setAttribute("aria-pressed", String(voice.on));
@@ -1753,6 +1816,11 @@ const PLEAS = [,
   () => `Your ants are starving to death: ${starved} so far, and more every few seconds. You are desperate and your composure is slipping. Beg the Anteater for help in 1 to 3 short, urgent sentences, saying ${ASK_FOR}.`,
   () => `Only ${ants.length} ant${ants.length === 1 ? "" : "s"} left, and they are dying. There are too few ants left to hold your thoughts together, so they come out broken and faint. Make a last plea to the Anteater in 1 or 2 short, faltering sentences.`,
 ];
+// a colony thinks with its ants: with few of them, Aunt Hillary's mind fades
+function mind() {
+  const n = ants.length;
+  return n >= 20 ? "clear" : n >= 10 ? "a little foggy" : n >= 5 ? "failing" : "almost gone";
+}
 const plea = lvl => typeof PLEAS[lvl] === "function" ? PLEAS[lvl]() : PLEAS[lvl];
 const THANKS = "Your pantry has filled up again since you asked the Anteater for help. Thank them in one or two short sentences.";
 function addNote(text) {     // the page speaking, not Aunt Hillary
@@ -1806,7 +1874,7 @@ function pleaFromAI(cue) {
 }
 function checkHunger() {
   if (colonyDead) return;
-  if (voice.on && tts && (tts.speaking || tts.pending)) return;   // let her finish one plea before the next
+  if (voice.on && talking) return;   // let her finish one plea before the next
   const h = hunger();
   if (pleaded && h.f > 0.6) {          // she's been fed
     pleaded = false; lastLevel = 0; starved = 0;
@@ -1901,6 +1969,7 @@ function showFull() {
   $("b-full").setAttribute("aria-pressed", String(on));
   $("b-full-label").textContent = on ? "Exit full screen" : "Full screen";
   $("b-full").title = on ? "Exit full screen (Esc)" : "Full screen (F)";
+  $("tip").textContent = tipFor(tool);
   requestAnimationFrame(() => { resize(); toBottom(); });
 }
 function pageFull(on) { row.classList.toggle("full", on); document.documentElement.style.overflow = on ? "hidden" : ""; showFull(); }
