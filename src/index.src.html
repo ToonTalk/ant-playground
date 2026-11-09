@@ -336,6 +336,10 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <h3>Food: a pile being eaten, then single crumbs</h3>
         <div class="strip" id="strip-food"></div>
       </div>
+      <div class="sheetrow">
+        <h3>Anteater: the snout that follows your pointer with the Anteater tool</h3>
+        <div class="strip" id="strip-anteater"></div>
+      </div>
       <ul class="notes">
         <li>All the walkers are drawn from straight above with the head up, so one row turns to face any of 360 directions.</li>
         <li>A pile shows one of four stages depending on how much is left. Sprinkled crumbs and dropped ones use the single crumbs.</li>
@@ -352,6 +356,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 const ATLAS_URI = "%%ATLAS%%";
 const FOOD_URI = "%%FOOD%%";
 const SPIDER_URI = "%%SPIDER%%";
+const ANTEATER_URI = "%%ANTEATER%%";
 const EXTRAS = %%EXTRAS%%;  // sizes measured by tools/extract_extras.py
 const EDITION = "%%EDITION%%";   // "artifact" on claude.ai, "site" on GitHub Pages
 const TILE = 200;          // atlas tile; row 0 = walking, row 1 = carrying, both facing up
@@ -467,6 +472,7 @@ const atlas = new Image();
 atlas.src = ATLAS_URI;
 const foodImg = new Image(); foodImg.src = FOOD_URI;
 const spiderImg = new Image(); spiderImg.src = SPIDER_URI;
+const anteaterImg = new Image(); anteaterImg.src = ANTEATER_URI;
 
 // ---------- COLONY ----------
 const world = document.getElementById("world");
@@ -654,10 +660,41 @@ function stepSpider(dt) {
 }
 
 // ---------- the anteater's tongue ----------
+// With the Anteater tool, the pointer becomes the anteater's snout, coming in from outside the colony
+// (pointing toward the nest). The pointer marks where the tongue reaches when it flicks out.
+const AE = EXTRAS.anteater;
+const snout = { ang: 90, over: false, lickAt: -1e9, until: 0, last: 0 };
+const snoutScale = () => 0.8 * sizeMul;
+function drawSnout(g) {
+  const now = performance.now();
+  if (tool !== "eat" || !(snout.over || pointer.down || now < snout.until)) { snout.last = now; return; }
+  const dt = Math.min(0.1, (now - snout.last) / 1000); snout.last = now;
+  const n = nestXY();
+  if (Math.hypot(n.x - pointer.x, n.y - pointer.y) > 90) {
+    const want = angTo(pointer.x, pointer.y, n.x, n.y);
+    snout.ang = norm(snout.ang + diff(want, snout.ang) * Math.min(1, dt * 5));
+  }
+  const t = (now - snout.lickAt) / 1000;
+  const frame = t < 0.05 ? 1 : t < 0.17 ? 2 : t < 0.27 ? 3 : 0;   // peek, stretch, curl back, closed
+  const s = snoutScale();
+  if (frame === 0) {          // where the tongue will land
+    g.strokeStyle = "rgba(255,236,210,0.7)"; g.lineWidth = 1.5; g.setLineDash([3, 4]);
+    g.beginPath(); g.arc(pointer.x, pointer.y, 20 * sizeMul + 6, 0, 7); g.stroke(); g.setLineDash([]);
+  }
+  g.save();
+  g.translate(pointer.x, pointer.y);
+  g.rotate((90 - snout.ang) * Math.PI / 180);
+  g.shadowColor = "rgba(20,12,4,0.35)"; g.shadowBlur = 12; g.shadowOffsetX = 8; g.shadowOffsetY = 12;
+  g.drawImage(anteaterImg, frame * AE.w, 0, AE.w, AE.h, -AE.reach[0] * s, -AE.reach[1] * s, AE.w * s, AE.h * s);
+  g.restore();
+}
+world.addEventListener("pointerenter", e => { snout.over = e.pointerType === "mouse"; });
+world.addEventListener("pointerleave", () => { snout.over = false; });
 let lickBatch = null;
 function lick(x, y) {
   const reach = 20 * sizeMul + 6;
   licks.push({ x, y, t: 0 });
+  snout.lickAt = performance.now(); snout.until = snout.lickAt + 900;
   let n = 0;
   for (let i = ants.length - 1; i >= 0; i--) {
     const a = ants[i];
@@ -825,13 +862,7 @@ function render() {
     drawSpiderShadow(g, spider.x, spider.y, spider.dir, ss);
     drawSpider(g, spiderImg, spider.x, spider.y, spider.dir, Math.floor(spider.walked / (SPIDER_STRIDE * ST * ss)) % 8, ss);
   }
-  for (const l of licks) {       // a sticky pink tongue tip darts in and back
-    const k = Math.sin(Math.PI * l.t / 0.3), r = (20 * sizeMul + 6) * k;
-    g.fillStyle = `rgba(214,92,128,${0.85 * k})`;
-    g.beginPath(); g.ellipse(l.x, l.y, r, r * 0.7, 0.4, 0, 7); g.fill();
-    g.fillStyle = `rgba(255,190,205,${0.6 * k})`;
-    g.beginPath(); g.ellipse(l.x - r * 0.25, l.y - r * 0.2, r * 0.35, r * 0.2, 0.4, 0, 7); g.fill();
-  }
+  drawSnout(g);
   document.getElementById("hud-carry").textContent = carrying;
   document.getElementById("hud-ants").textContent = ants.length;
   const hu = hunger(), bar = document.getElementById("hud-pantry");
@@ -936,6 +967,17 @@ function buildStrips() {
     setThumb(t, FOOD_URI, EXTRAS.food.tile, 4, 2, i % 4, i >> 2, 64);
     food.appendChild(t);
   }
+  for (let i = 0; i < 4; i++) {
+    const t = document.createElement("span");
+    t.className = "thumb still"; t.setAttribute("role", "img");
+    t.setAttribute("aria-label", ["Mouth closed", "Tongue peeking out", "Tongue stretched out", "Tongue curling back"][i]);
+    const k = 110 / EXTRAS.anteater.h;
+    t.style.width = EXTRAS.anteater.w * k + "px"; t.style.height = "110px";
+    t.style.backgroundImage = `url(${ANTEATER_URI})`;
+    t.style.backgroundSize = `${4 * EXTRAS.anteater.w * k}px 110px`;
+    t.style.backgroundPosition = `${-i * EXTRAS.anteater.w * k}px 0`;
+    document.getElementById("strip-anteater").appendChild(t);
+  }
   for (let r = 0; r < 3; r++) {
     const strip = document.getElementById("strip-" + r);
     for (let f = 0; f < 8; f++) {
@@ -1018,7 +1060,7 @@ const CURSORS = {
   lead: "grab",
   leadDown: "grabbing",
   scare: svgCursor(`<g stroke="#1a1511" stroke-width="4" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><g stroke="#fff3d6" stroke-width="2" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><circle cx="16" cy="16" r="2" fill="#f0b85a" stroke="#1a1511"/>`),
-  eat: svgCursor(`<path d="M30 4c-5 1-9 4-12 8-2.4 3.2-5 6.6-8.6 8.4" fill="none" stroke="#1a1511" stroke-width="5" stroke-linecap="round"/><path d="M30 4c-5 1-9 4-12 8-2.4 3.2-5 6.6-8.6 8.4" fill="none" stroke="#d65c80" stroke-width="3" stroke-linecap="round"/><circle cx="7" cy="22" r="4.2" fill="#d65c80" stroke="#1a1511" stroke-width="1.4"/><circle cx="6" cy="21" r="1.2" fill="#ffd0dc"/>`, 7, 22),
+  eat: "none",                // the snout is drawn on the canvas instead
 };
 function setCursor() {
   world.style.cursor = tool === "lead" ? (pointer.down ? CURSORS.leadDown : CURSORS.lead) : CURSORS[tool];
@@ -1722,5 +1764,5 @@ function start() {
 }
 setupAI();
 // wait for the sheets with load events (decode() can stall in a background tab)
-Promise.all([atlas, foodImg, spiderImg].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))).then(start);
+Promise.all([atlas, foodImg, spiderImg, anteaterImg].map(im => im.complete ? 0 : new Promise(r => { im.onload = im.onerror = r; }))).then(start);
 </script>

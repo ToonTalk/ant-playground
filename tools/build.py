@@ -16,6 +16,7 @@ for key, val in {
     "%%ATLAS%%": uri(b / "topdown-atlas.webp"),
     "%%FOOD%%": uri(b / "food-atlas.webp"),
     "%%SPIDER%%": uri(b / "spider-atlas.webp"),
+    "%%ANTEATER%%": uri(b / "anteater-atlas.webp"),
     "%%EXTRAS%%": (b / "extras.json").read_text(encoding="utf-8").replace("\n", ""),
 }.items():
     assert src.count(key) == 1, key

@@ -99,3 +99,36 @@ print("spider abdomen in tile px", round(abd, 1), "body length", round(body_len 
 prev = Image.new("RGBA", (satlas.width, satlas.height + atlas.height), (138, 106, 67, 255))
 prev.alpha_composite(satlas); prev.alpha_composite(atlas, (0, satlas.height))
 prev.convert("RGB").save(root / "build" / "extras-preview.png")
+
+# ---------- anteater snout (4x1: closed, tongue peeking, tongue out, tongue curling back) ----------
+# All four frames share the head's position. The head is cut off flat at the shoulders, so fade the
+# bottom away; the page hides the pointer and draws this instead, tongue tip on the pointer.
+im = Image.open(root / "anteater-source.webp").convert("RGBA")
+W, H = im.size
+cw = W / 4
+X0, X1 = 60, 440              # crop inside each cell (the head spans x 83..419)
+FADE0, FADE1 = 500, 645       # fade out from just below the eyes to the shoulders
+AS = 0.5
+frames = []
+for i in range(4):
+    c = np.asarray(im.crop((round(i * cw) + X0, 0, round(i * cw) + X1, H))).astype(np.float64)
+    ys = np.arange(H)[:, None]
+    c[..., 3] *= np.clip((FADE1 - ys) / (FADE1 - FADE0), 0, 1)
+    c[c[..., 3] < 8] = 0
+    frames.append(Image.fromarray(c.round().astype(np.uint8), "RGBA"))
+fw, fh = X1 - X0, H
+a0 = np.asarray(frames[0])[..., 3] > 100
+ty = np.nonzero(a0.any(1))[0].min(); tx = np.nonzero(a0[ty + 3])[0].mean()       # snout tip
+a2 = np.asarray(frames[2])[..., 3] > 100
+gy = np.nonzero(a2.any(1))[0].min(); gx = np.nonzero(a2[gy + 4])[0].mean()       # tongue's furthest reach
+aw, ah = round(fw * AS), round(fh * AS)
+aatlas = Image.new("RGBA", (aw * 4, ah), (0, 0, 0, 0))
+for i, f in enumerate(frames):
+    aatlas.paste(f.resize((aw, ah), Image.LANCZOS), (i * aw, 0))
+aatlas.save(root / "build" / "anteater-atlas.webp", "WEBP", quality=88, alpha_quality=95, method=6)
+ex = json.load(open(root / "build" / "extras.json"))
+ex["anteater"] = {"w": aw, "h": ah, "snout": [round(tx * AS, 1), round(ty * AS, 1)], "reach": [round(gx * AS, 1), round(gy * AS, 1)]}
+json.dump(ex, open(root / "build" / "extras.json", "w"), indent=1)
+print("anteater", ex["anteater"])
+prev = Image.new("RGBA", aatlas.size, (138, 106, 67, 255)); prev.alpha_composite(aatlas)
+prev.convert("RGB").save(root / "build" / "anteater-preview.png")
