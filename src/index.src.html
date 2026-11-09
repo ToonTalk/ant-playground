@@ -54,7 +54,9 @@ h1 em { font-style: normal; color: var(--ant); }
 #world.lead { touch-action: none; cursor: grab; }
 #world.draw { touch-action: none; }
 .tip { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); font-size: 13px; color: #f3e7d3; background: rgba(26, 21, 17, .6); padding: 4px 12px; border-radius: 999px; pointer-events: none; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
-.hud { position: absolute; left: 12px; top: 12px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.hud { position: absolute; left: 12px; top: 12px; right: 12px; display: grid; gap: 6px; justify-items: start; pointer-events: none; }
+.hud-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.hud-row.small .pill { font-size: 11px; padding: 3px 8px; background: rgba(26, 21, 17, .62); }
 .pill { font-family: var(--mono); font-size: 12px; background: rgba(26, 21, 17, .72); color: #f3e7d3; padding: 5px 10px; border-radius: 999px; backdrop-filter: blur(4px); }
 .pill b { color: #f0b85a; font-weight: 600; }
 .toolbar { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; gap: 4px; background: rgba(26, 21, 17, .78); padding: 5px; border-radius: 12px; backdrop-filter: blur(6px); max-width: calc(100% - 24px); }
@@ -84,7 +86,13 @@ h1 em { font-style: normal; color: var(--ant); }
 .fs-btn svg { width: 18px; height: 18px; }
 .fs-btn .shrink { display: none; } .fs-btn[aria-pressed="true"] .shrink { display: inline; } .fs-btn[aria-pressed="true"] .grow { display: none; }
 .fs-btn:focus-visible { outline: 2px solid #f0b85a; outline-offset: 2px; }
-@media (max-width: 640px) { .fs-btn span { display: none; } .fs-btn { bottom: 70px; } }
+.stats-btn { display: none; pointer-events: auto; cursor: pointer; border: 0; font: inherit; }
+@media (max-width: 640px) {
+  .fs-btn span { display: none; } .fs-btn { top: 12px; bottom: auto; padding: 7px; }
+  .hud { right: 52px; } .hud .pill { font-size: 11px; padding: 4px 8px; }
+  .hud-row.small { display: none; } .hud.open .hud-row.small { display: flex; }
+  .stats-btn { display: inline-block; font-family: var(--mono); font-size: 11px; }
+}
 /* full screen: the colony fills the screen, with Aunt Hillary beside it when there's room */
 .colony-row.full { position: fixed; inset: 0; z-index: 100; background: var(--loam); padding: 10px; height: 100vh; height: 100dvh; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
 .colony-row.full .stage, .colony-row.full #world { height: 100%; }
@@ -214,13 +222,22 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
     <div class="colony-row">
     <div class="stage">
       <canvas id="world" class="draw" aria-label="Ant colony. Tap to drop crumbs; ants carry them to the nest."></canvas>
-      <div class="hud">
-        <span class="pill">ants <b id="hud-ants">40</b></span>
-        <span class="pill">carrying <b id="hud-carry">0</b></span>
-        <span class="pill">crumbs home <b id="hud-home">0</b></span>
-        <span class="pill" id="pill-pantry" title="Every crumb carried home goes in the pantry; every ant eats from it">pantry <span class="meter"><i id="hud-pantry"></i></span> <b id="hud-hunger">content</b></span>
-        <span class="pill" id="pill-eaten" style="display:none">eaten <b id="hud-eaten">0</b></span>
-        <span class="pill" id="hud-fps">— fps</span>
+      <div class="hud" id="hud">
+        <div class="hud-row">
+          <span class="pill">ants <b id="hud-ants">40</b></span>
+          <span class="pill">carrying <b id="hud-carry">0</b></span>
+          <button class="pill stats-btn" id="b-stats" type="button" aria-expanded="false" aria-controls="hud-totals">more</button>
+          <span class="pill" id="pill-pantry" title="Every crumb carried home goes in the pantry; every ant eats from it">pantry <span class="meter"><i id="hud-pantry"></i></span> <b id="hud-hunger">content</b></span>
+        </div>
+        <div class="hud-row small" id="hud-totals" title="Totals since this colony began">
+          <span class="pill">born <b id="hud-born">0</b></span>
+          <span class="pill">starved <b id="hud-starved">0</b></span>
+          <span class="pill">eaten by you <b id="hud-eat-you">0</b></span>
+          <span class="pill">eaten by spiders <b id="hud-eat-spider">0</b></span>
+          <span class="pill" id="pill-wished" style="display:none" title="Ants that died when you lowered the Ants slider">wished away <b id="hud-wished">0</b></span>
+          <span class="pill">crumbs home <b id="hud-home">0</b></span>
+          <span class="pill" id="hud-fps">— fps</span>
+        </div>
       </div>
       <div class="dead" id="dead" style="display:none">
         <div class="dead-card">
@@ -524,12 +541,14 @@ let bodies = [];                            // dead ants, fading where they fell
 let famineFrom = 0;                         // how many ants there were when the pantry ran dry
 let lifeLog = [];                           // births and deaths over the last two minutes
 function logLife(kind) { lifeLog.push({ t: simTime, kind }); lifeLog = lifeLog.filter(e => simTime - e.t < 120); }
-function hatch() { const a = makeAnt(); a.born = simTime; ants.push(a); logLife("born"); }
-function dies(i) {                          // an ant dies where it stands and its body slowly fades
+const tally = { born: 0, starved: 0, wished: 0 };   // totals since this colony began (eaten: youEaten, spiderEaten)
+function hatch() { const a = makeAnt(); a.born = simTime; ants.push(a); logLife("born"); tally.born++; }
+function dies(i, why) {                          // an ant dies where it stands and its body slowly fades
   const a = ants[i]; ants.splice(i, 1);
   bodies.push({ x: a.x, y: a.y, dir: a.dir, frame: Math.floor(a.walked / (STRIDE * TILE * antScale())) % 8, carrying: a.carrying, t: 0 });
   if (a.carrying) addCrumb(a.x, a.y, 1, 0);
   logLife("died");
+  tally[why]++;
 }
 // hunger: every crumb carried home goes in the pantry; every ant eats from it all the time
 const PANTRY_MAX = 100, EAT_PER_ANT = 0.022, EGG_COST = 2;
@@ -786,7 +805,7 @@ function step(dt) {
       while (sliderT > 0.1) {
         sliderT -= 0.1;
         if (wantBorn > 0 && ants.length < MAX_ANTS) { hatch(); wantBorn--; }
-        else if (wantGone > 0 && ants.length) { dies((R() * ants.length) | 0); wantGone--; }
+        else if (wantGone > 0 && ants.length) { dies((R() * ants.length) | 0, "wished"); wantGone--; }
         else { wantBorn = wantGone = 0; break; }
       }
     }
@@ -808,7 +827,7 @@ function step(dt) {
     if (starveT > Math.max(3, 12 - starvingFor / 10)) {
       starveT = 0;
       let i = ants.findIndex(a => !a.carrying); if (i < 0) i = 0;
-      dies(i); starved++;
+      dies(i, "starved"); starved++;
       note(ants.length ? `One of my ants starved (${starved} so far).` : "My last ant starved.");
     }
   } else if (pantry > 5) { starveT = 0; starvingFor = 0; }
@@ -945,10 +964,12 @@ function render() {
   bar.style.width = Math.round(hu.f * 100) + "%";
   bar.classList.toggle("low", hu.f < 0.15);
   document.getElementById("hud-hunger").textContent = hu.word;
-  const eaten = spiderEaten + youEaten;
-  const pe = document.getElementById("pill-eaten");
-  pe.style.display = eaten ? "" : "none";
-  document.getElementById("hud-eaten").textContent = eaten;
+  $("hud-born").textContent = tally.born;
+  $("hud-starved").textContent = tally.starved;
+  $("hud-eat-you").textContent = youEaten;
+  $("hud-eat-spider").textContent = spiderEaten;
+  $("hud-wished").textContent = tally.wished;
+  $("pill-wished").style.display = tally.wished ? "" : "none";
   if (showDebug) {
     g.font = "10px JetBrains Mono, monospace"; g.lineWidth = 1.5;
     for (const a of ants) {
@@ -1188,6 +1209,7 @@ $("b-clear").onclick = () => {
   nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
   W = 0; resize(); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
   spider = null; spiderEaten = youEaten = 0; updateSpiderButton();
+  tally.born = tally.starved = tally.wished = 0; bodies = [];
   refound(); pantry = 70;
   note("The ground was swept clean and a new nest dug.");
   const n = ants.length; ants = []; setAntCount(n);
@@ -1727,12 +1749,25 @@ function refound() {
 }
 $("b-refound").onclick = () => {
   refound(); setAntCount(40); chat.length = 0;
+  tally.born = tally.starved = tally.wished = 0; spiderEaten = youEaten = 0; delivered = 0; $("hud-home").textContent = "0";
   note("A new colony was founded at the nest.");
   addNote("A new colony has started at the nest. This Aunt Hillary is a new pattern, so she remembers nothing of the last one.");
 };
+$("b-stats").onclick = () => {
+  const open = $("hud").classList.toggle("open");
+  $("b-stats").setAttribute("aria-expanded", String(open));
+  $("b-stats").textContent = open ? "less" : "more";
+  placePlea();
+};
+function placePlea() {
+  const p = $("plea"), hud = $("hud");
+  p.style.top = matchMedia("(max-width: 640px)").matches ? "" : hud.offsetTop + hud.offsetHeight + 8 + "px";
+}
+addEventListener("resize", placePlea);
 function showPlea(html, { button = false, thinking = false } = {}) {
   const p = $("plea");
   p.style.display = "";
+  placePlea();
   p.querySelector(".body").innerHTML = html;
   p.classList.toggle("thinking", thinking);
   $("plea-hear").style.display = button ? "" : "none";
@@ -1770,7 +1805,10 @@ function checkHunger() {
 }
 $("plea-hear").onclick = () => pleaFromAI(plea(Math.max(1, desperation())));
 $("plea-x").onclick = hidePlea;
-setInterval(() => { if (seeded && !paused && !$("view-colony").hidden) checkHunger(); }, 1000);
+setInterval(() => {
+  if ($("plea").style.display !== "none") placePlea();   // the stats can rewrap as numbers grow
+  if (seeded && !paused && !$("view-colony").hidden) checkHunger();
+}, 1000);
 $("g-form").addEventListener("submit", e => {
   e.preventDefault();
   const q = gQ.value; gQ.value = "";
