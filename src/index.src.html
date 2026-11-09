@@ -80,17 +80,29 @@ h1 em { font-style: normal; color: var(--ant); }
 .dead-card p { margin: 0; color: #6f604c; }
 .dead-card .btn { background: #2a2119; color: #f6f0e4; }
 .msg.note { align-self: center; text-align: center; font-size: 13px; font-style: italic; color: var(--muted); background: none; padding: 2px 8px; margin: 0; }
+.fs-btn { all: unset; cursor: pointer; position: absolute; right: 12px; bottom: 12px; display: inline-flex; gap: 6px; align-items: center; background: rgba(26, 21, 17, .78); color: #f3e7d3; font-size: 12.5px; padding: 7px 10px; border-radius: 10px; backdrop-filter: blur(6px); }
+.fs-btn svg { width: 18px; height: 18px; }
+.fs-btn .shrink { display: none; } .fs-btn[aria-pressed="true"] .shrink { display: inline; } .fs-btn[aria-pressed="true"] .grow { display: none; }
+.fs-btn:focus-visible { outline: 2px solid #f0b85a; outline-offset: 2px; }
+@media (max-width: 640px) { .fs-btn span { display: none; } .fs-btn { bottom: 70px; } }
+/* full screen: the colony fills the screen, with Aunt Hillary beside it when there's room */
+.colony-row.full { position: fixed; inset: 0; z-index: 100; background: var(--loam); padding: 10px; height: 100vh; height: 100dvh; grid-template-rows: minmax(0, 1fr); grid-template-columns: minmax(0, 1fr); }
+.colony-row.full .stage, .colony-row.full #world { height: 100%; }
+.colony-row.full .guide { display: none; }
+@media (min-width: 900px) { .colony-row.full { grid-template-columns: minmax(0, 1fr) 340px; } .colony-row.full .guide { display: flex; height: 100%; } }
+.colony-row.full .g-scroll { height: auto; }
 .colony-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 @media (min-width: 1060px) { .colony-row { grid-template-columns: minmax(0, 1fr) 340px; } }
 .guide { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 @media (min-width: 1060px) { .guide { height: clamp(360px, 66vh, 720px); } }
-@media (max-width: 1059px) { .g-log { max-height: 340px; } }
+@media (max-width: 1059px) { .g-scroll { height: 360px; } }
 .g-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .g-head h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
 .linkish { all: unset; cursor: pointer; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
 .linkish:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
 .g-intro { margin: 0; font-size: 13.5px; color: var(--muted); }
-.g-log { flex: 1 1 auto; min-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; }
+.g-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; overscroll-behavior: contain; }
+.g-log { display: flex; flex-direction: column; gap: 8px; }
 .msg { padding: 8px 11px; border-radius: 12px; font-size: 14.5px; max-width: 92%; overflow-wrap: anywhere; }
 .msg p { margin: 0 0 6px; } .msg p:last-child { margin: 0; }
 .msg ul { margin: 4px 0; padding-left: 18px; }
@@ -101,9 +113,14 @@ h1 em { font-style: normal; color: var(--ant); }
 .msg.you .who { color: inherit; opacity: .7; }
 .msg.thinking .body::after { content: "…"; animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
-.g-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { all: unset; cursor: pointer; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg); background: var(--loam); }
-.chip:focus-visible { outline: 2px solid var(--ant); }
+.g-ask { position: relative; }
+.ideas { position: static; }
+.ideas-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 20; background: var(--burrow); border: 1px solid var(--line); border-radius: 12px; padding: 6px; display: grid; gap: 2px; min-width: 220px; max-width: 100%; box-shadow: 0 8px 24px rgba(20, 12, 4, .25); }
+.g-ask.pinned .ideas-menu { bottom: auto; top: calc(100% + 6px); }
+.ideas-menu button { all: unset; cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 8px; }
+.ideas-menu button:hover, .ideas-menu button:focus-visible { background: var(--chip-bg); }
+.ideas-menu .head { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 4px 10px 2px; }
+#g-ideas[aria-expanded="true"] { background: var(--chip-bg); }
 .g-ask { display: flex; gap: 8px; align-items: end; }
 .g-ask textarea { flex: 1; min-width: 0; resize: none; font: inherit; font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--loam); color: var(--fg); }
 .g-ask textarea:focus-visible { outline: 2px solid var(--ant); outline-offset: 1px; }
@@ -217,6 +234,9 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <div class="body"></div>
         <div class="plea-row"><button class="btn" id="plea-hear" type="button">Hear her</button><button class="linkish" id="plea-x" type="button">Close</button></div>
       </div>
+      <button class="fs-btn" id="b-full" type="button" aria-pressed="false" title="Full screen (F)">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><g class="grow"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></g><g class="shrink"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></g></svg>
+        <span id="b-full-label">Full screen</span></button>
       <div class="tip" id="tip" aria-live="polite">Tap the ground to drop a crumb, or drag to sprinkle a line of them</div>
       <div class="toolbar" role="group" aria-label="Tool">
         <button id="tool-crumb" aria-pressed="true" title="Click the ground to drop a crumb">
@@ -245,24 +265,30 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <select id="g-voice-pick"></select>
         <button class="linkish" id="g-voice-try" type="button">Try it</button>
       </div>
-      <p class="g-intro">Aunt Hillary is a made-up character from Douglas Hofstadter's book <i>Gödel, Escher, Bach</i>: a whole ant colony who can talk. No single ant understands a word, but the colony as a whole does. Here an AI plays her, and you are her old friend, the Anteater.</p>
-      <details class="g-more">
-        <summary>Is she real?</summary>
-        <p>No. Real ant colonies don't talk or think in words. But scientists do call a colony a <i>superorganism</i>, because thousands of ants, each following simple rules, work together like one living thing. They find food, share it and defend the nest with no ant in charge. Even the queen doesn't give orders; her job is laying eggs.</p>
-        <p>Aunt Hillary is a way of imagining what the whole colony's point of view might be like. Hofstadter used her to think about how a mind could come from lots of small parts that don't understand anything themselves, like the cells in your brain.</p>
-        <p>The ants here are much simpler than real ones. Real ants use many different smells and touches to send messages, and a real colony doesn't starve in a few minutes.</p>
-      </details>
-      <div class="g-settings" id="g-settings" style="display:none"></div>
-      <div class="g-log" id="g-log" aria-live="polite"></div>
-      <div class="g-chips" id="g-chips"></div>
+      <div class="g-scroll" id="g-scroll">
+        <p class="g-intro">Aunt Hillary is a made-up character from Douglas Hofstadter's book <i>Gödel, Escher, Bach</i>: a whole ant colony who can talk. No single ant understands a word, but the colony as a whole does. Here an AI plays her, and you are her old friend, the Anteater.</p>
+        <details class="g-more">
+          <summary>Is she real?</summary>
+          <p>No. Real ant colonies don't talk or think in words. But scientists do call a colony a <i>superorganism</i>, because thousands of ants, each following simple rules, work together like one living thing. They find food, share it and defend the nest with no ant in charge. Even the queen doesn't give orders; her job is laying eggs.</p>
+          <p>Aunt Hillary is a way of imagining what the whole colony's point of view might be like. Hofstadter used her to think about how a mind could come from lots of small parts that don't understand anything themselves, like the cells in your brain.</p>
+          <p>The ants here are much simpler than real ones. Real ants use many different smells and touches to send messages, and a real colony doesn't starve in a few minutes.</p>
+        </details>
+        <div class="g-settings" id="g-settings" style="display:none"></div>
+        <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><pre id="g-sense"></pre></details>
+        <div class="g-log" id="g-log" aria-live="polite"></div>
+      </div>
       <form class="g-ask" id="g-form">
+        <div class="ideas">
+          <button class="mic-btn" id="g-ideas" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="g-ideas-menu" title="Things to ask her" aria-label="Things to ask her">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></button>
+          <div class="ideas-menu" id="g-ideas-menu" role="menu" aria-label="Things to ask her" style="display:none"></div>
+        </div>
         <textarea id="g-q" rows="2" placeholder="Say something to Aunt Hillary…" aria-label="Your words to Aunt Hillary"></textarea>
         <button class="mic-btn" id="g-mic" type="button" aria-pressed="false" title="Talk to Aunt Hillary" aria-label="Talk to Aunt Hillary" style="display:none">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></button>
         <button class="btn" id="g-send" type="submit">Ask</button>
       </form>
       <p class="g-status" id="g-status" role="status" style="display:none"></p>
-      <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><pre id="g-sense"></pre></details>
     </aside>
     </div>
 
@@ -1405,23 +1431,42 @@ function md(src) {
 }
 
 const chat = [];   // {who: "you" | "her", text}
-const gLog = $("g-log"), gQ = $("g-q"), gSend = $("g-send");
+const gLog = $("g-log"), gScroll = $("g-scroll"), gQ = $("g-q"), gSend = $("g-send");
+const toBottom = () => { gScroll.scrollTop = gScroll.scrollHeight; };
 function addMsg(who, html, cls = "") {
   const el = document.createElement("div");
   el.className = `msg ${who} ${cls}`.trim();
   el.innerHTML = `<span class="who">${who === "you" ? "You, the Anteater" : "Aunt Hillary"}</span><div class="body">${html}</div>`;
-  gLog.appendChild(el); gLog.scrollTop = gLog.scrollHeight;
+  gLog.appendChild(el); toBottom();
   return el;
 }
 addMsg("her", md("Why, Anteater, how good of you to call! Do mind my trails. Ask me anything. I can feel everything my ants are doing on the ground beside us, though none of them could tell you a thing about it."));
 
 const CHIPS = ["How are you feeling?", "Are you hungry?", "Where is the food?", "Does any ant know it's part of you?", "May I eat a few of your ants?", "How did that trail get there?", "What is a superorganism?", "Are you real?"];
+// the questions live in a small menu by the text box
+const ideasBtn = $("g-ideas"), ideasMenu = $("g-ideas-menu");
+ideasMenu.innerHTML = '<div class="head" aria-hidden="true">Things to ask her</div>';
 for (const c of CHIPS) {
   const b = document.createElement("button");
-  b.type = "button"; b.className = "chip"; b.textContent = c;
-  b.onclick = () => ask(c);
-  $("g-chips").appendChild(b);
+  b.type = "button"; b.setAttribute("role", "menuitem"); b.tabIndex = -1; b.textContent = c;
+  b.onclick = () => { openIdeas(false); ask(c); };
+  ideasMenu.appendChild(b);
 }
+const ideaItems = () => [...ideasMenu.querySelectorAll("button")];
+function openIdeas(open, focusFirst) {
+  ideasMenu.style.display = open ? "" : "none";
+  ideasBtn.setAttribute("aria-expanded", String(open));
+  if (open && focusFirst) ideaItems()[0].focus();
+}
+ideasBtn.onclick = e => openIdeas(ideasMenu.style.display === "none", e.detail === 0);   // keyboard opens with focus inside
+ideasMenu.addEventListener("keydown", e => {
+  const items = ideaItems(), i = items.indexOf(document.activeElement);
+  if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
+  else if (e.key === "Escape") { e.preventDefault(); openIdeas(false); ideasBtn.focus(); }
+  else if (e.key === "Tab") openIdeas(false);
+});
+document.addEventListener("pointerdown", e => { if (!e.target.closest(".ideas")) openIdeas(false); });
 
 let asking = false, aiWorked = false;   // aiWorked: an answer has come back, so she may speak up unasked
 // q: what the Anteater said, or null when she speaks up on her own (then `cue` says why)
@@ -1447,7 +1492,7 @@ async function speak(q, cue, onDone) {
   let text = null;
   try {
     text = clean(await withTimeout(askAI(HILLARY, prompt, {
-      onText: t => { body.innerHTML = md(clean(t)); gLog.scrollTop = gLog.scrollHeight; onDone?.(clean(t), true); },
+      onText: t => { body.innerHTML = md(clean(t)); toBottom(); onDone?.(clean(t), true); },
       onStatus: s => { body.textContent = s; },
     }), 120000));
     el.classList.remove("thinking");
@@ -1462,7 +1507,7 @@ async function speak(q, cue, onDone) {
     if (q) chat.pop();
     text = null;
   }
-  gLog.scrollTop = gLog.scrollHeight;
+  toBottom();
   asking = false; gSend.disabled = false;
   onDone?.(text, false);
   return text;
@@ -1607,7 +1652,7 @@ const THANKS = "Your pantry has filled up again since you asked the Anteater for
 function addNote(text) {     // the page speaking, not Aunt Hillary
   const el = document.createElement("p");
   el.className = "msg note"; el.textContent = text;
-  gLog.appendChild(el); gLog.scrollTop = gLog.scrollHeight;
+  gLog.appendChild(el); toBottom();
 }
 function colonyDies() {
   colonyDead = true; pleaded = false; hidePlea(); hush();
@@ -1688,6 +1733,7 @@ setInterval(showSense, 1000);
 function showSettings(open) {
   const box = $("g-settings");
   box.style.display = open ? "" : "none";
+  if (open) gScroll.scrollTop = box.offsetTop - gScroll.offsetTop - 8;
   $("g-gear").setAttribute("aria-expanded", String(open));
 }
 $("g-gear").onclick = () => showSettings($("g-settings").style.display === "none");
@@ -1722,6 +1768,35 @@ function buildSettings() {
   $("s-prov").onchange = e => { ai.provider = e.target.value; saveAI(); drawKeyed(); };
   drawKeyed();
 }
+
+// ---------- full screen ----------
+// The real thing where the browser allows it; otherwise (for example inside claude.ai) the colony fills the page.
+const row = document.querySelector(".colony-row");
+const isFull = () => row.classList.contains("full");
+function showFull() {
+  const on = isFull();
+  $("b-full").setAttribute("aria-pressed", String(on));
+  $("b-full-label").textContent = on ? "Exit full screen" : "Full screen";
+  $("b-full").title = on ? "Exit full screen (Esc)" : "Full screen (F)";
+  requestAnimationFrame(() => { resize(); toBottom(); });
+}
+function pageFull(on) { row.classList.toggle("full", on); document.documentElement.style.overflow = on ? "hidden" : ""; showFull(); }
+function setFull(on) {
+  if (on) {
+    if (document.fullscreenEnabled && row.requestFullscreen) row.requestFullscreen().then(() => pageFull(true), () => pageFull(true));
+    else pageFull(true);
+  } else {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    pageFull(false);
+  }
+}
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && isFull()) pageFull(false); });
+$("b-full").onclick = () => setFull(!isFull());
+addEventListener("keydown", e => {
+  if (e.target.closest("input, textarea, select, [contenteditable]") || e.ctrlKey || e.metaKey || e.altKey) return;
+  if ((e.key === "f" || e.key === "F") && !$("view-colony").hidden) { e.preventDefault(); setFull(!isFull()); }
+  else if (e.key === "Escape" && isFull() && !document.fullscreenElement) setFull(false);
+});
 
 // ---------- routing ----------
 function route() {
