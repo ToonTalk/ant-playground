@@ -16,6 +16,7 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
   - A spider nearby is frightened off.
 - **Anteater**: tap or drag to lick up ants. The pointer becomes the anteater's snout, and the tongue flicks out to where you tap.
 - **Spider**: tap to drop a spider there, up to three at once. Ants that see it run away. Each spider eats three ants and then leaves.
+- **Time** speeds the whole simulation up or slows it down together. **Walking speed** changes only how fast the ants and spiders walk; everything else keeps its pace, so faster walkers bring home more food than the colony eats, and the game gets easier.
 - **Sprite lab**: turn any walker to any heading, step through its frames, and compare frames with the ghost of the previous one.
 
 ## Hunger

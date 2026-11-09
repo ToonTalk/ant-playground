@@ -317,7 +317,11 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <label for="n-ants">Ants (moves as the colony grows and shrinks) <output id="o-ants">40</output></label>
         <input id="n-ants" type="range" min="0" max="160" value="40">
       </div>
-      <div class="field">
+      <div class="field" title="Speeds up or slows down everything together: walking, scent fading, eating, hatching and starving">
+        <label for="n-time">Time <output id="o-time">1.0×</output></label>
+        <input id="n-time" type="range" min="0.25" max="4" step="0.25" value="1">
+      </div>
+      <div class="field" title="Only how fast ants and spiders walk. Everything else keeps its pace, so faster walkers bring home more food and the colony is easier to keep fed">
         <label for="n-speed">Walking speed <output id="o-speed">1.0×</output></label>
         <input id="n-speed" type="range" min="0.25" max="2.5" step="0.05" value="1">
       </div>
@@ -339,7 +343,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <button class="btn ghost" id="b-clear">New ground</button>
         </div>
       </div>
-      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help.</p>
+      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. Time speeds everything up or slows it down together; Walking speed changes only how fast the creatures walk, so faster walkers bring home more food than the colony eats. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help.</p>
     </div>
   </section>
 
@@ -571,7 +575,7 @@ let paused = reduceMotion;
 let tool = "crumb";
 let pointer = { x: 0, y: 0, down: false };
 let showTrails = true, showDebug = false;
-let speedMul = 1, sizeMul = 1;
+let speedMul = 1, sizeMul = 1, timeMul = 1;
 const GRID = 6;
 let gw = 0, gh = 0, trail = new Float32Array(0);
 const trailCanvas = document.createElement("canvas");
@@ -1204,6 +1208,7 @@ function showPopulation() {
   if (sliderHeld || performance.now() < sliderUntil || wantBorn || wantGone) return;
   $("n-ants").value = ants.length; $("o-ants").textContent = ants.length;
 }
+$("n-time").oninput = e => { timeMul = +e.target.value; $("o-time").textContent = timeMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("n-speed").oninput = e => { speedMul = +e.target.value; $("o-speed").textContent = speedMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("n-size").oninput = e => { sizeMul = +e.target.value; $("o-size").textContent = sizeMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("c-trails").onchange = e => { showTrails = e.target.checked; };
@@ -1939,7 +1944,10 @@ function frame(now) {
   if (!$("view-colony").hidden && !W) resize();
   if (!$("view-colony").hidden && W) {
     if (!seeded) seedWorld();
-    if (!paused) { const sub = 3; for (let i = 0; i < sub; i++) step(dt / sub); }
+    if (!paused) {   // small steps (at most 1/180 s) keep the ants steady however fast time runs
+      const t = dt * timeMul, sub = Math.max(1, Math.ceil(t * 180));
+      for (let i = 0; i < sub; i++) step(t / sub);
+    }
     render();
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 0.5) { $("hud-fps").textContent = Math.round(fpsN / fpsAcc) + " fps"; fpsAcc = 0; fpsN = 0; }
