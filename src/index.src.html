@@ -202,6 +202,8 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 .science select, .science input[type="text"], .science input[type="number"], .science textarea { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--loam); color: var(--fg); min-width: 0; width: 100%; }
 .science textarea { resize: vertical; }
 .science :is(select, input, textarea):focus-visible { outline: 2px solid var(--ant); outline-offset: 1px; }
+.sci-ideas { display: grid; gap: 8px; justify-items: start; }
+.sci-ideas .chip { font-size: 14px; padding: 6px 12px; white-space: normal; border-radius: 12px; }
 .sci-fixed summary { cursor: pointer; font-size: 14px; color: var(--muted); }
 .sci-fixed .sci-grid { margin-top: 10px; }
 .sci-progress { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
@@ -488,6 +490,14 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
       </div>
       <p class="hint" id="s-problem" role="alert" style="display:none"></p>
       <div class="sci-progress" id="s-progress" style="display:none"><div class="bar"><i id="s-bar"></i></div><span id="s-status" role="status"></span></div>
+    </div>
+
+    <div class="panel sci-empty" id="s-empty">
+      <h2>Results</h2>
+      <p class="hint">Your results will appear here: a chart, a table of every run, a spreadsheet to download, and a lab guide to think them through with.</p>
+      <h3>Not sure where to start? Try one of these</h3>
+      <div class="sci-ideas" id="s-ideas"></div>
+      <p class="hint">Picking one fills in the form. You still write your guess and press Run.</p>
     </div>
 
     <div class="panel sci-results" id="s-results" style="display:none">
@@ -2468,7 +2478,24 @@ function labFill() {
                : `<input id="f-${p.id}" type="number" min="${p.min}" max="${p.max}" step="${p.whole ? 1 : "any"}" value="${p.def}">`) + `</div>`).join("");
   const chips = ["What should I look at first?", "Does this match my guess?", "Why do the repeats differ?", "What should I try next?"];
   for (const c of chips) { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = c; b.onclick = () => labAsk(c); $("s-chips").appendChild(b); }
+  for (const idea of LAB_IDEAS) { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = idea.ask; b.onclick = () => labIdea(idea); $("s-ideas").appendChild(b); }
   labChoice(true);
+}
+// starter experiments: each one fills in the form
+const LAB_IDEAS = [
+  { ask: "Does scent that lasts longer bring more food home?", a: "halfLife", av: "2, 5, 11, 25, 60" },
+  { ask: "Does scent matter more when the food is far away?", a: "distance", av: "3, 6, 9, 12", b: "scent", bv: "off, on" },
+  { ask: "Is a bigger colony better at finding food?", a: "ants", av: "5, 10, 20, 40, 80" },
+  { ask: "How far away can the food be before the colony goes hungry?", a: "distance", av: "4, 7, 10, 13", mins: 8 },
+  { ask: "Do ants still need trails if they can smell food from far off?", a: "smell", av: "1, 2, 4, 8", b: "scent", bv: "off, on" },
+];
+function labIdea(idea) {
+  const set = (id, v) => { $(id).value = v; };
+  set("s-a", idea.a); set("s-b", idea.b || ""); labChoice(true);
+  set("s-a-values", idea.av); if (idea.b) set("s-b-values", idea.bv);
+  set("s-mins", idea.mins || 5); set("s-reps", 3);
+  labCount();
+  $("s-guess").focus();
 }
 function labChoice(reset) {
   const a = labParam($("s-a").value), b = labParam($("s-b").value);
@@ -2517,7 +2544,7 @@ async function labGo() {
 const labMean = (rows, id) => { const v = rows.map(r => r[id]).filter(x => x !== ""); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
 const labFmt = x => x === null || x === "" ? "" : Math.abs(x) >= 100 ? String(Math.round(x)) : String(Math.round(x * 10) / 10);
 function labShow() {
-  $("s-results").style.display = ""; $("s-guide").style.display = ""; $("s-save").style.display = "none";
+  $("s-empty").style.display = "none"; $("s-results").style.display = ""; $("s-guide").style.display = ""; $("s-save").style.display = "none";
   const { a, b, rows } = lab;
   $("s-summary").textContent = `${rows.length} colonies, each run for ${lab.seconds / 60} ${lab.seconds === 60 ? "minute" : "minutes"}, changing ${a.short.toLowerCase()}` +
     (b ? ` and ${b.short.toLowerCase()}` : "") + `.` + (lab.stopped ? " You stopped it early, so some settings have fewer runs." : "") + (lab.guess ? ` Your guess: "${lab.guess}"` : "");

@@ -243,6 +243,9 @@ await test("Science lab: runs repeat exactly, differ between settings, and leave
 
 await test("Science lab: the form runs an experiment and shows a chart, a table and a spreadsheet", async () => {
   const s = await run(`location.hash = "#science"; await new Promise(r => setTimeout(r, 100));
+    // a starter experiment fills in the form
+    $("s-ideas").children[1].click();
+    const idea = { a: $("s-a").value, av: $("s-a-values").value, b: $("s-b").value, bv: $("s-b-values").value, count: $("s-count").textContent, empty: $("s-empty").style.display !== "none" };
     const set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input", { bubbles: true })); $(id).dispatchEvent(new Event("change", { bubbles: true })); };
     set("s-a", "halfLife"); set("s-a-values", "2, 11, 40"); set("s-b", "distance"); set("s-b-values", "5, 10"); set("s-mins", 2); set("s-reps", 2);
     $("s-guess").value = "Longer-lasting scent will bring more food home";
@@ -258,8 +261,9 @@ await test("Science lab: the form runs an experiment and shows a chart, a table 
     const csv = labTable(",").trim().split("\\r\\n"), brief = labBrief();
     await labDownload();
     location.hash = "#colony"; await new Promise(r => setTimeout(r, 100));
-    return { count, problem, rowsShown, head, dots, lines, legend, title, csvRows: csv.length, csvHead: csv[0], csvFirst: csv[1], saveNote: $("s-save-note").textContent, copy: $("s-copy").value.split("\\n")[0],
+    return { idea, emptyAfter: $("s-empty").style.display, count, problem, rowsShown, head, dots, lines, legend, title, csvRows: csv.length, csvHead: csv[0], csvFirst: csv[1], saveNote: $("s-save-note").textContent, copy: $("s-copy").value.split("\\n")[0],
       brief: brief.slice(0, 900), guideShown: $("s-guide").style.display !== "none", liveOk: W !== LAB_W && ants.length > 0 };`);
+  assert(s.idea.a === "distance" && s.idea.av === "3, 6, 9, 12" && s.idea.b === "scent" && s.idea.bv === "off, on" && /24 colonies/.test(s.idea.count) && s.idea.empty && s.emptyAfter === "none", JSON.stringify(s.idea));
   assert(/12 colonies/.test(s.count), "count: " + s.count);
   assert(/between 1 and 120/.test(s.problem), "a bad value should be explained: " + s.problem);
   assert(s.rowsShown === 12 && s.dots === 12 && s.lines === 2 && /Food distance.*5.*10/.test(s.legend), JSON.stringify({ rows: s.rowsShown, dots: s.dots, lines: s.lines, legend: s.legend }));
