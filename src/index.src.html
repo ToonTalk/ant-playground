@@ -197,7 +197,17 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 .lab { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
 /* science lab */
 .science { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
-@media (min-width: 1100px) { .science { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); } .sci-setup { grid-row: span 2; } }
+/* wide: the form beside the chart, then the table and the lab guide across the whole width, so the table has room for all its columns */
+@media (min-width: 1100px) {
+  .science { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); }
+  .sci-runs, .sci-guide { grid-column: 1 / -1; }
+  .science > .sci-guide { grid-template-columns: minmax(0, 388px) minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; column-gap: 48px; }   /* lines up with the two columns above; the selector has to beat .panel, further down */
+  .sci-guide > h2 { grid-area: 1 / 1; }
+  .sci-guide > .hint { grid-area: 2 / 1; }
+  .sci-guide > .g-chips { grid-area: 3 / 1; align-self: start; }
+  .sci-guide > .g-log { grid-area: 1 / 2 / 4 / 3; }
+  .sci-guide > .g-ask { grid-area: 4 / 2; }
+}
 .sci-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 20px; }
 .science select, .science input[type="text"], .science input[type="number"], .science textarea { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--loam); color: var(--fg); min-width: 0; width: 100%; }
 .science textarea { resize: vertical; }
@@ -209,7 +219,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 .sci-progress { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
 .sci-progress .bar { height: 8px; border-radius: 4px; background: var(--chip-bg); overflow: hidden; }
 .sci-progress .bar i { display: block; height: 100%; width: 0; background: var(--ant); }
-.sci-table-wrap { overflow: auto; max-height: 320px; border: 1px solid var(--line); border-radius: 10px; }
+.sci-table-wrap { overflow: auto; max-height: clamp(240px, 60vh, 520px);border: 1px solid var(--line); border-radius: 10px; }
 #s-table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
 #s-table th, #s-table td { padding: 5px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
 #s-table th { position: sticky; top: 0; background: var(--burrow); font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: normal; vertical-align: bottom; }
@@ -515,10 +525,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
     </div>
 
     <div class="panel sci-results" id="s-results" style="display:none">
-      <div class="g-head">
-        <h2>Results</h2>
-        <button class="btn ghost" id="s-download" type="button">Download spreadsheet</button>
-      </div>
+      <h2>Results</h2>
       <p class="hint" id="s-summary"></p>
       <div class="field">
         <label for="s-measure">Show on the chart</label>
@@ -526,7 +533,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
       </div>
       <div class="viz-root" id="s-chart"></div>
       <p class="hint" id="s-ceiling" style="display:none">In most of these runs the colony collected all the food there was, so "Crumbs brought home" can't tell them apart. What else could you look at, or change, to see a difference?</p>
-      <p class="hint">Each dot is one colony. The line joins the averages. The table has every run, and the spreadsheet has every setting too. To see what a colony did, click its dot, or Watch in its row.</p>
+      <p class="hint">Each dot is one colony. The line joins the averages. To see what a colony did, click its dot, or Watch in its row of the table below.</p>
       <div class="sci-watch" id="s-watch" style="display:none">
         <div class="g-head">
           <h3 id="w-title">Run 1</h3>
@@ -549,6 +556,14 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         </div>
         <p class="hint" id="w-end" role="status"></p>
       </div>
+    </div>
+
+    <div class="panel sci-runs" id="s-runs" style="display:none">
+      <div class="g-head">
+        <h2>Every run</h2>
+        <button class="btn ghost" id="s-download" type="button">Download spreadsheet</button>
+      </div>
+      <p class="hint">One row for each colony. The spreadsheet has every setting too.</p>
       <div class="sci-table-wrap" tabindex="0" aria-label="Table of every run"><table id="s-table"></table></div>
       <div id="s-save" style="display:none">
         <p class="hint" id="s-save-note"></p>
@@ -2590,7 +2605,7 @@ async function labGo() {
 const labMean = (rows, id) => { const v = rows.map(r => r[id]).filter(x => x !== ""); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
 const labFmt = x => x === null || x === "" ? "" : Math.abs(x) >= 100 ? String(Math.round(x)) : String(Math.round(x * 10) / 10);
 function labShow() {
-  $("s-empty").style.display = "none"; $("s-results").style.display = ""; $("s-guide").style.display = ""; $("s-save").style.display = "none";
+  $("s-empty").style.display = "none"; $("s-results").style.display = ""; $("s-runs").style.display = ""; $("s-guide").style.display = ""; $("s-save").style.display = "none";
   const { a, b, rows } = lab;
   $("s-summary").textContent = `${rows.length} colonies, each run for ${lab.seconds / 60} ${lab.seconds === 60 ? "minute" : "minutes"}, changing ${a.short.toLowerCase()}` +
     (b ? ` and ${b.short.toLowerCase()}` : "") + `.` + (lab.stopped ? " You stopped it early, so some settings have fewer runs." : "") + (lab.guess ? ` Your guess: "${lab.guess}"` : "");

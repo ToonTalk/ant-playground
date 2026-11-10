@@ -258,16 +258,18 @@ await test("Science lab: the form runs an experiment and shows a chart, a table 
     const rowsShown = $("s-table").tBodies[0].rows.length, head = [...$("s-table").tHead.rows[0].cells].map(c => c.textContent);
     const dots = document.querySelectorAll("#s-chart .dot").length, lines = document.querySelectorAll("#s-chart .mean").length, legend = document.querySelector("#s-chart .viz-legend")?.textContent;
     set("s-measure", "antsEnd"); const title = document.querySelector("#s-chart .title").textContent;
+    const box = document.querySelector(".sci-table-wrap"), sideways = box.scrollWidth - box.clientWidth;
     const csv = labTable(",").trim().split("\\r\\n"), brief = labBrief();
     await labDownload();
     location.hash = "#colony"; await new Promise(r => setTimeout(r, 100));
-    return { idea, emptyAfter: $("s-empty").style.display, count, problem, rowsShown, head, dots, lines, legend, title, csvRows: csv.length, csvHead: csv[0], csvFirst: csv[1], saveNote: $("s-save-note").textContent, copy: $("s-copy").value.split("\\n")[0],
+    return { idea, emptyAfter: $("s-empty").style.display, count, problem, rowsShown, head, dots, lines, legend, title, sideways, csvRows: csv.length, csvHead: csv[0], csvFirst: csv[1], saveNote: $("s-save-note").textContent, copy: $("s-copy").value.split("\\n")[0],
       brief: brief.slice(0, 900), guideShown: $("s-guide").style.display !== "none", liveOk: W !== LAB_W && ants.length > 0 };`);
   assert(s.idea.a === "distance" && s.idea.av === "3, 6, 9, 12" && s.idea.b === "scent" && s.idea.bv === "off, on" && /24 colonies/.test(s.idea.count) && s.idea.empty && s.emptyAfter === "none", JSON.stringify(s.idea));
   assert(/12 colonies/.test(s.count), "count: " + s.count);
   assert(/between 1 and 120/.test(s.problem), "a bad value should be explained: " + s.problem);
   assert(s.rowsShown === 12 && s.dots === 12 && s.lines === 2 && /Food distance.*5.*10/.test(s.legend), JSON.stringify({ rows: s.rowsShown, dots: s.dots, lines: s.lines, legend: s.legend }));
   assert(s.head.includes("Scent half-life (s)") && s.head.includes("Crumbs brought home") && s.title === "Ants at the end", s.head.join(" | "));
+  assert(s.sideways <= 0, "on a desktop-width page the table should show every column without scrolling sideways; it overflows by " + s.sideways + "px");
   assert(s.csvRows === 13 && /^Run,Scent half-life \(s\),Scent,/.test(s.csvHead) && /Minutes run/.test(s.csvHead) && /^1,2,on,0,2,40,5,2,300,1,1,1,2,/.test(s.csvFirst), s.csvHead + " / " + s.csvFirst);
   assert(/Saved as ant-playground-experiment.csv/.test(s.saveNote) && /^Run\t/.test(s.copy), s.saveNote);
   assert(/Changed: Scent half-life/.test(s.brief) && /Longer-lasting scent/.test(s.brief) && s.guideShown && s.liveOk, JSON.stringify({ guide: s.guideShown, live: s.liveOk }) + " " + s.brief);
