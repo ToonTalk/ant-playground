@@ -1,83 +1,20 @@
 // Talk to Aunt Hillary with a real Claude key, in headless Chrome:  node tests/hillary.mjs [model ...]
 // This costs a little money (about a dozen short requests per model).
 //
-// The key never enters the browser. The page builds its request as usual with a stand-in key; its
-// fetch to api.anthropic.com is handed to this script, which puts the real key in and streams the
-// reply back. So this exercises the page's own prompt, request and stream reading.
-//
-// The key is read from the environment variable ANT-PLAYGROUND-ANTHROPIC-KEY (or ANTHROPIC_API_KEY).
-import { execFileSync } from "node:child_process";
+// The key is read from the environment variable ANT-PLAYGROUND-ANTHROPIC-KEY and never enters the
+// browser (see relay.mjs).
 import fs from "node:fs";
 import { openPage } from "./chrome.mjs";
+import { readKey, relay, shim } from "./relay.mjs";
 
-function readKey() {
-  const names = ["ANT-PLAYGROUND-ANTHROPIC-KEY", "ANT_PLAYGROUND_ANTHROPIC_KEY", "ANTHROPIC_API_KEY"];
-  for (const n of names) if (process.env[n]) return process.env[n];
-  if (process.platform === "win32") {       // a user variable set after this shell started
-    for (const n of names) {
-      try {
-        const v = execFileSync("powershell", ["-NoProfile", "-Command", `[Environment]::GetEnvironmentVariable('${n}','User')`], { encoding: "utf8" }).trim();
-        if (v) return v;
-      } catch {}
-    }
-  }
-  return null;
-}
 const KEY = readKey();
 if (!KEY) { console.error("No key found. Set ANT-PLAYGROUND-ANTHROPIC-KEY."); process.exit(2); }
-const STAND_IN = "the-real-key-stays-in-node";
 const models = process.argv.slice(2).filter(a => !a.startsWith("--"));
 if (!models.length) models.push("claude-sonnet-5-5");
 const quick = process.argv.includes("--quick");     // two scenes only, to check a model answers at all
 
 const page = await openPage();
-const log = [];      // one entry per request: model, status, tokens, timings
-await page.send("Runtime.addBinding", { name: "__toNode" });
-page.on(async d => {
-  if (d.method !== "Runtime.bindingCalled" || d.params.name !== "__toNode") return;
-  const { id, url, headers, body } = JSON.parse(d.params.payload);
-  const back = (kind, v) => page.evaluate(`__fromNode(${id}, ${JSON.stringify(kind)}, ${JSON.stringify(v)})`);
-  const entry = { model: JSON.parse(body).model, sent: JSON.parse(body), t0: Date.now() };
-  log.push(entry);
-  try {
-    if (headers["x-api-key"] !== STAND_IN) throw new Error("unexpected key in the page");
-    const res = await fetch(url, { method: "POST", headers: { ...headers, "x-api-key": KEY }, body });
-    entry.status = res.status;
-    await back("head", res.status);
-    const dec = new TextDecoder();
-    let all = "";
-    for await (const chunk of res.body) {
-      const t = dec.decode(chunk, { stream: true });
-      if (!entry.firstText && /text_delta/.test(t)) entry.firstText = Date.now() - entry.t0;
-      all += t;
-      await back("chunk", t);
-    }
-    entry.ms = Date.now() - entry.t0;
-    entry.stop = /"stop_reason":"(\w+)"/.exec(all)?.[1];
-    entry.out = +(/"output_tokens":(\d+)/g.exec([...all.matchAll(/"output_tokens":\d+/g)].at(-1)?.[0] || "")?.[1] || 0);
-    entry.in = +(/"input_tokens":(\d+)/.exec(all)?.[1] || 0);
-    entry.servedBy = /"model":"([^"]+)"/.exec(all)?.[1];
-    if (res.status !== 200) entry.error = all.slice(0, 300);
-    await back("end", 0);
-  } catch (e) { entry.error = String(e); try { await back("head", 599); await back("end", 0); } catch {} }
-});
-
-const SHIM = `
-  window.__pending = new Map(); window.__n = 0;
-  const realFetch = window.fetch;
-  window.fetch = (url, init) => {
-    if (!String(url).startsWith("https://api.anthropic.com/")) return realFetch(url, init);
-    const id = ++window.__n;
-    return new Promise(resolve => {
-      let ctrl; const stream = new ReadableStream({ start(c) { ctrl = c; } }); const enc = new TextEncoder();
-      window.__pending.set(id, { head: s => resolve(new Response(stream, { status: s })), chunk: t => ctrl.enqueue(enc.encode(t)), end: () => ctrl.close() });
-      __toNode(JSON.stringify({ id, url: String(url), headers: init.headers, body: init.body }));
-    });
-  };
-  window.__fromNode = (id, kind, v) => window.__pending.get(id)[kind](v);
-  window.stepFor = s => { for (let i = 0; i < s * 60; i++) step(1 / 60); };
-  window.setAnts = n => { ants.length = Math.min(ants.length, n); while (ants.length < n) ants.push(makeAnt()); };
-  0`;
+const log = await relay(page, KEY);      // one entry per request: model, status, tokens, timings
 
 // each scene: set the colony up, then either a question or one of her own pleas
 const scenes = [
@@ -101,10 +38,9 @@ for (const model of models) {
   for (const sc of scenes) {
     if (quick && !sc.quick) continue;
     await page.fresh();
-    await page.evaluate(SHIM);
+    await page.evaluate(shim(model));
     const n0 = log.length;
     const r = await page.evaluate(`(async () => {
-      ai.provider = "anthropic"; ai.keys.anthropic = ${JSON.stringify(STAND_IN)}; ai.models.anthropic = ${JSON.stringify(model)};
       ${sc.setup}
       paused = false;        // or she is told time is standing still
       const feels = felt();

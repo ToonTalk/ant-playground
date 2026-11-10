@@ -195,6 +195,42 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 
 /* lab */
 .lab { display: grid; grid-template-columns: minmax(0, 400px) minmax(0, 1fr); gap: 16px; align-items: start; }
+/* science lab */
+.science { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1100px) { .science { grid-template-columns: minmax(0, 420px) minmax(0, 1fr); } .sci-setup { grid-row: span 2; } }
+.sci-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 20px; }
+.science select, .science input[type="text"], .science input[type="number"], .science textarea { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--loam); color: var(--fg); min-width: 0; width: 100%; }
+.science textarea { resize: vertical; }
+.science :is(select, input, textarea):focus-visible { outline: 2px solid var(--ant); outline-offset: 1px; }
+.sci-fixed summary { cursor: pointer; font-size: 14px; color: var(--muted); }
+.sci-fixed .sci-grid { margin-top: 10px; }
+.sci-progress { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+.sci-progress .bar { height: 8px; border-radius: 4px; background: var(--chip-bg); overflow: hidden; }
+.sci-progress .bar i { display: block; height: 100%; width: 0; background: var(--ant); }
+.sci-table-wrap { overflow: auto; max-height: 320px; border: 1px solid var(--line); border-radius: 10px; }
+#s-table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+#s-table th, #s-table td { padding: 5px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+#s-table th { position: sticky; top: 0; background: var(--burrow); font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: normal; vertical-align: bottom; }
+#s-table td.txt, #s-table th.txt { text-align: left; }
+.sci-copy { width: 100%; height: 120px; font-family: var(--mono); font-size: 11.5px; }
+.chip { all: unset; cursor: pointer; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg); background: var(--loam); }
+.chip:focus-visible { outline: 2px solid var(--ant); }
+.g-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sci-guide .g-log { max-height: 420px; overflow-y: auto; min-height: 60px; }
+/* the chart: series colors checked for color-blind separation on this page's light and dark surfaces */
+.viz-root { --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100; --viz-grid: var(--line); --viz-text: var(--muted); --viz-surface: var(--burrow); position: relative; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .viz-root { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; } }
+:root[data-theme="dark"] .viz-root { --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500; }
+.viz-root svg { display: block; width: 100%; height: auto; overflow: visible; }
+.viz-root text { font-family: var(--body); font-size: 12px; fill: var(--viz-text); }
+.viz-root .title { font-size: 13.5px; fill: var(--fg); font-weight: 700; }
+.viz-root .grid { stroke: var(--viz-grid); stroke-width: 1; }
+.viz-root .mean { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.viz-root .dot { stroke: var(--viz-surface); stroke-width: 2; }
+.viz-root .hit { fill: transparent; cursor: default; }
+.viz-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); margin: 4px 0 0; }
+.viz-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
+.viz-tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--loam); font-size: 12.5px; padding: 5px 8px; border-radius: 7px; white-space: nowrap; transform: translate(-50%, -130%); z-index: 5; }
 @media (max-width: 900px) { .lab { grid-template-columns: minmax(0, 1fr); } }
 .panel { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-width: 0; }
 .panel h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
@@ -231,6 +267,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
     </div>
     <nav class="tabs" aria-label="Views">
       <a href="#colony" id="tab-colony" aria-current="page">Colony</a>
+      <a href="#science" id="tab-science">Science lab</a>
       <a href="#lab" id="tab-lab">Sprite lab</a>
     </nav>
   </header>
@@ -401,7 +438,86 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <li>With the scent off, how close to the nest must a pile be for the colony to live on it?</li>
         </ul>
       </details>
-      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. Open "The ants' rules" to change how the ants behave. Time speeds everything up or slows it down together; Walking speed changes only how fast the creatures walk, so faster walkers bring home more food than the colony eats. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help. <a href="https://toontalk.github.io/ant-playground/making-of.html" target="_blank" rel="noopener">How Ant Playground was made</a>.</p>
+      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. Open "The ants' rules" to change how the ants behave. Time speeds everything up or slows it down together; Walking speed changes only how fast the creatures walk, so faster walkers bring home more food than the colony eats. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help. <a href="https://toontalk.github.io/ant-playground/making-of.html" target="_blank" rel="noopener">How Ant Playground was made</a> · <a href="https://docs.google.com/document/d/1-DafFi7iC7ZQpgSSo-HtedDYJJZP8gCNbEev-PLMDt4/edit?usp=sharing" target="_blank" rel="noopener">Ken Kahn's post about it</a>.</p>
+    </div>
+  </section>
+
+  <!-- SCIENCE LAB -->
+  <section id="view-science" class="science" hidden>
+    <div class="panel sci-setup">
+      <h2>Set up an experiment</h2>
+      <p class="hint">Run the same colony many times, changing one thing at a time, and see what difference it makes. Each run is a fresh colony on its own patch of ground, with the nest in the middle and the food in a ring around it. It runs fast and out of sight, and the ants follow the same rules as in the Colony.</p>
+      <div class="field">
+        <label for="s-a">1. What do you want to change?</label>
+        <select id="s-a"></select>
+      </div>
+      <div class="field">
+        <label for="s-a-values">Try these values</label>
+        <input id="s-a-values" type="text" autocomplete="off" spellcheck="false">
+        <span class="hint" id="s-a-hint"></span>
+      </div>
+      <div class="field">
+        <label for="s-b">2. Change a second thing as well? (You don't have to)</label>
+        <select id="s-b"></select>
+      </div>
+      <div class="field" id="s-b-box" style="display:none">
+        <label for="s-b-values">with these values (up to 4)</label>
+        <input id="s-b-values" type="text" autocomplete="off" spellcheck="false">
+        <span class="hint" id="s-b-hint"></span>
+      </div>
+      <div class="field">
+        <label for="s-mins">3. Each colony runs for <output id="o-mins">5 minutes</output></label>
+        <input id="s-mins" type="range" min="1" max="15" value="5">
+      </div>
+      <div class="field">
+        <label for="s-reps">4. Repeat each setting <output id="o-reps">3 times</output></label>
+        <input id="s-reps" type="range" min="1" max="6" value="3">
+      </div>
+      <details class="sci-fixed">
+        <summary>Everything else stays the same in every run (open to change it)</summary>
+        <div id="s-fixed" class="sci-grid"></div>
+      </details>
+      <div class="field">
+        <label for="s-guess">5. Before you run it: what do you think will happen, and why?</label>
+        <textarea id="s-guess" rows="2" placeholder="My guess is…"></textarea>
+      </div>
+      <div class="checks">
+        <button class="btn" id="s-run" type="button">Run the experiment</button>
+        <button class="btn ghost" id="s-stop" type="button" style="display:none">Stop</button>
+        <span class="hint" id="s-count"></span>
+      </div>
+      <p class="hint" id="s-problem" role="alert" style="display:none"></p>
+      <div class="sci-progress" id="s-progress" style="display:none"><div class="bar"><i id="s-bar"></i></div><span id="s-status" role="status"></span></div>
+    </div>
+
+    <div class="panel sci-results" id="s-results" style="display:none">
+      <div class="g-head">
+        <h2>Results</h2>
+        <button class="btn ghost" id="s-download" type="button">Download spreadsheet</button>
+      </div>
+      <p class="hint" id="s-summary"></p>
+      <div class="field">
+        <label for="s-measure">Show on the chart</label>
+        <select id="s-measure"></select>
+      </div>
+      <div class="viz-root" id="s-chart"></div>
+      <p class="hint">Each dot is one colony. The line joins the averages. The table has every run, and the spreadsheet has every setting too.</p>
+      <div class="sci-table-wrap" tabindex="0" aria-label="Table of every run"><table id="s-table"></table></div>
+      <div id="s-save" style="display:none">
+        <p class="hint" id="s-save-note"></p>
+        <textarea class="sci-copy" id="s-copy" readonly aria-label="The results, to copy and paste into a spreadsheet"></textarea>
+      </div>
+    </div>
+
+    <div class="panel sci-guide" id="s-guide" style="display:none">
+      <h2>Lab guide</h2>
+      <p class="hint">An AI to think your results through with. It asks more than it tells, because working it out yourself is the point. It is sent your settings, your guess and the results table.</p>
+      <div class="g-log" id="s-log" aria-live="polite"></div>
+      <div class="g-chips" id="s-chips"></div>
+      <form class="g-ask" id="s-form">
+        <textarea id="s-q" rows="2" placeholder="Ask about your results, or say what you notice…" aria-label="Your words to the lab guide"></textarea>
+        <button class="btn" id="s-send" type="submit">Ask</button>
+      </form>
     </div>
   </section>
 
@@ -616,6 +732,7 @@ function dies(i, why) {                          // an ant dies where it stands 
 }
 // hunger: every crumb carried home goes in the pantry; every ant eats from it all the time
 const PANTRY_MAX = 100, EAT_PER_ANT = 0.022, EGG_COST = 2;
+let appetite = 1;      // how much each ant eats, times normal (the Science lab can change it)
 let pantry = 70, starveT = 0, starvingFor = 0, starved = 0, colonyDead = false;
 function hunger() {
   const f = pantry / PANTRY_MAX;
@@ -643,11 +760,12 @@ let gw = 0, gh = 0, trail = new Float32Array(0);
 const trailCanvas = document.createElement("canvas");
 const tctx = trailCanvas.getContext("2d");
 let trailImg = null;
-const R = rng(1234);
+let R = rng(1234);     // the Science lab swaps in its own seeded numbers for each run
 
 function nestXY() { return { x: nest.fx * W, y: nest.fy * H }; }
 
 function resize() {
+  if (labBusy) return;                     // the Science lab has borrowed the colony's variables
   const r = world.getBoundingClientRect();
   const nw = Math.round(r.width), nh = Math.round(r.height);
   if (!nw || !nh || (nw === W && nh === H)) return;
@@ -876,7 +994,7 @@ function step(dt) {
   const maxTurn = 260 * dt;
   const reach = 4 + TILE * antScale() * 0.2;   // mouth to crumb center
   simTime += dt;
-  pantry = Math.max(0, pantry - ants.length * EAT_PER_ANT * dt);
+  pantry = Math.max(0, pantry - ants.length * EAT_PER_ANT * appetite * dt);
   if (!colonyDead) {
     // the Ants slider: new ants pour out of the nest, or ants die where they are
     if (wantBorn > 0 || wantGone > 0) {
@@ -2018,6 +2136,7 @@ function addNote(text) {     // the page speaking, not Aunt Hillary
   gLog.appendChild(el); toBottom();
 }
 function colonyDies() {
+  if (labBusy) { colonyDead = true; return; }      // a Science lab colony dies quietly
   colonyDead = true; pleaded = false; hidePlea(); hush();
   note("The colony has died.");
   addNote("Aunt Hillary has fallen silent. Her last ant starved, and with it went the pattern that was her.");
@@ -2062,7 +2181,7 @@ function pleaFromAI(cue) {
   });
 }
 function checkHunger() {
-  if (colonyDead) return;
+  if (colonyDead || labBusy) return;
   if (voice.on && talking) return;   // let her finish one plea before the next
   const h = hunger();
   if (pleaded && h.f > 0.6) {          // she's been fed
@@ -2222,20 +2341,379 @@ addEventListener("keydown", e => {
   else if (e.key === "Escape" && isFull() && !document.fullscreenElement) setFull(false);
 });
 
+// ---------- SCIENCE LAB: run many colonies out of sight, changing one thing at a time ----------
+// Each run borrows the colony's own variables (so it is the very same simulation), on a standard patch of
+// ground so that results don't depend on the size of anyone's screen. The colony on the Colony page is put
+// away first and put back afterwards.
+const LAB_W = 1200, LAB_H = 1200, LAB_DT = 1 / 30;
+const LAB_PARAMS = [
+  { id: "halfLife", name: "Scent fades by half in (seconds)", short: "Scent half-life (s)", def: 11, values: "2, 5, 11, 25, 60", min: 1, max: 120 },
+  { id: "scent", name: "Scent", short: "Scent", def: "on", values: "off, on", options: ["off", "on"] },
+  { id: "spread", name: "Scent spreads sideways (0 = not at all, 1 = a lot)", short: "Scent spread", def: 0, values: "0, 0.3, 0.6, 1", min: 0, max: 1 },
+  { id: "smell", name: "An ant smells food from (ant-lengths)", short: "Smell distance (ant-lengths)", def: 2, values: "0.5, 1, 2, 4, 8", min: 0.5, max: 8 },
+  { id: "ants", name: "Ants at the start", short: "Ants at start", def: 40, values: "5, 10, 20, 40, 80", min: 1, max: 160, whole: true },
+  { id: "distance", name: "Food distance from the nest (ant-lengths)", short: "Food distance (ant-lengths)", def: 8, values: "3, 5, 8, 11, 13", min: 2, max: 13 },
+  { id: "piles", name: "Number of food piles", short: "Food piles", def: 2, values: "1, 2, 4", min: 1, max: 6, whole: true },
+  { id: "pile", name: "Crumbs in each pile", short: "Crumbs per pile", def: 300, values: "50, 150, 300, 600", min: 5, max: 1000, whole: true },
+  { id: "walk", name: "Walking speed (1 = normal)", short: "Walking speed", def: 1, values: "0.5, 1, 1.5, 2", min: 0.25, max: 2.5 },
+  { id: "appetite", name: "How much each ant eats (1 = normal)", short: "Appetite", def: 1, values: "0.5, 1, 1.5, 2", min: 0, max: 4 },
+];
+const LAB_MEASURES = [
+  { id: "home", name: "Crumbs brought home" },
+  { id: "first", name: "Seconds until the first crumb came home" },
+  { id: "cleared", name: "Seconds until all the food was collected" },
+  { id: "antsEnd", name: "Ants at the end" },
+  { id: "antsMax", name: "Most ants at one time" },
+  { id: "starved", name: "Ants that starved" },
+  { id: "pantryEnd", name: "Pantry at the end (%)" },
+  { id: "lasted", name: "Seconds the colony survived" },
+];
+const labParam = id => LAB_PARAMS.find(p => p.id === id);
+let labBusy = false, labStop = false, lab = null;   // lab: the last experiment { a, b, rows, guess, seconds, reps, fixed }
+
+function labSnapshot() {
+  return { W, H, gw, gh, trail, trail2, nest, ants, crumbs, bodies, spiders, ripples, licks, pantry, starveT, starvingFor, starved, colonyDead,
+    hatchT, wantBorn, wantGone, sliderT, spreadT, famineFrom, lifeLog, delivered, spiderEaten, youEaten, simTime, events, speedMul, sizeMul, appetite, R,
+    tally: { ...tally }, rules: { ...rules } };
+}
+function labRestore(s) {
+  ({ W, H, gw, gh, trail, trail2, nest, ants, crumbs, bodies, spiders, ripples, licks, pantry, starveT, starvingFor, starved, colonyDead,
+    hatchT, wantBorn, wantGone, sliderT, spreadT, famineFrom, lifeLog, delivered, spiderEaten, youEaten, simTime, events, speedMul, sizeMul, appetite, R } = s);
+  Object.assign(tally, s.tally); Object.assign(rules, s.rules);
+  $("hud-home").textContent = delivered;
+}
+// a fresh colony for one run: nest in the middle, pantry 70% full, the food in a ring around the nest
+function labSetup(c, seed) {
+  W = LAB_W; H = LAB_H; gw = Math.ceil(W / GRID); gh = Math.ceil(H / GRID);
+  trail = new Float32Array(gw * gh); trail2 = new Float32Array(gw * gh);
+  nest = { fx: 0.5, fy: 0.5 }; R = rng(seed);
+  ants = []; crumbs = []; bodies = []; spiders = []; ripples = []; licks = []; lifeLog = []; events = [];
+  pantry = 70; starveT = starvingFor = starved = hatchT = wantBorn = wantGone = sliderT = spreadT = famineFrom = 0; colonyDead = false;
+  tally.born = tally.starved = tally.wished = 0; delivered = spiderEaten = youEaten = 0; simTime = 0;
+  Object.assign(rules, { scent: c.scent === "on", halfLife: c.halfLife, smell: c.smell, spread: c.spread });
+  speedMul = c.walk; sizeMul = 1; appetite = c.appetite;
+  for (let i = 0; i < c.ants; i++) ants.push(makeAnt());
+  const turn = R() * 360;
+  for (let i = 0; i < c.piles; i++) {
+    const a = (turn + i * 360 / c.piles) * Math.PI / 180;
+    addCrumb(W / 2 + Math.cos(a) * c.distance * ANT_LEN, H / 2 - Math.sin(a) * c.distance * ANT_LEN, c.pile, 0);
+  }
+}
+// A pause that lets the page redraw and respond. Timers are slowed to one a second in a hidden tab,
+// which would make an experiment crawl; a message to ourselves isn't.
+const labBreath = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+// run one colony for `seconds` of its own time and measure it
+async function labRunOne(c, seed, seconds) {
+  labSetup(c, seed);
+  const total = c.piles * c.pile;
+  const m = { home: 0, first: "", cleared: "", antsEnd: 0, antsMax: ants.length, starved: 0, pantryEnd: 0, lasted: seconds, survived: "yes" };
+  let t = 0, last = performance.now();
+  while (t < seconds && !colonyDead && !labStop) {
+    for (let i = 0; i < 30; i++) step(LAB_DT);
+    t++;
+    if (m.first === "" && delivered > 0) m.first = t;
+    if (m.cleared === "" && delivered >= total) m.cleared = t;
+    if (ants.length > m.antsMax) m.antsMax = ants.length;
+    if (performance.now() - last > 40) { await labBreath(); last = performance.now(); }   // let the page breathe
+  }
+  if (colonyDead) { m.survived = "no"; m.lasted = t; }
+  m.home = delivered; m.antsEnd = ants.length; m.starved = tally.starved; m.pantryEnd = Math.round(pantry);
+  return m;
+}
+// read "2, 5, 11" (or "off, on") into values this parameter can take; throws a sentence saying what's wrong
+function labValues(p, text, most) {
+  const parts = text.split(/[,;\s]+/).map(v => v.trim().toLowerCase()).filter(Boolean);
+  if (!parts.length) throw `Type at least one value for "${p.short}".`;
+  const out = [];
+  for (const v of parts) {
+    let x;
+    if (p.options) { if (!p.options.includes(v)) throw `"${p.short}" can only be ${p.options.join(" or ")}.`; x = v; }
+    else {
+      x = Number(v);
+      if (!isFinite(x)) throw `"${v}" isn't a number ("${p.short}").`;
+      if (x < p.min || x > p.max) throw `"${p.short}" must be between ${p.min} and ${p.max}; ${v} isn't.`;
+      if (p.whole) x = Math.round(x);
+    }
+    if (!out.includes(x)) out.push(x);
+  }
+  if (out.length > most) throw `That's ${out.length} values for "${p.short}"; ${most} is the most.`;
+  return out;
+}
+// the whole experiment: every value of A (with every value of B), each repeated. Repeat number n always
+// starts from the same random numbers, so two settings are compared on the same luck.
+async function labRun(plan, onProgress) {
+  const rows = [], saved = labSnapshot();
+  labBusy = true; labStop = false;
+  try {
+    const bs = plan.b ? plan.bValues : [null];
+    const total = plan.aValues.length * bs.length * plan.reps;
+    for (const bv of bs) for (const av of plan.aValues) for (let rep = 1; rep <= plan.reps && !labStop; rep++) {
+      const c = { ...plan.fixed, [plan.a.id]: av };
+      if (plan.b) c[plan.b.id] = bv;
+      onProgress?.(rows.length, total, c);
+      const m = await labRunOne(c, 7919 * rep + 13, plan.seconds);
+      if (!labStop) rows.push({ run: rows.length + 1, ...c, repeat: rep, ...m });
+    }
+  } finally { labRestore(saved); labBusy = false; }
+  return rows;
+}
+
+// ---- the page ----
+function labFill() {
+  const opts = LAB_PARAMS.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+  $("s-a").innerHTML = opts; $("s-b").innerHTML = `<option value="">Nothing else</option>` + opts;
+  $("s-measure").innerHTML = LAB_MEASURES.map(m => `<option value="${m.id}">${m.name}</option>`).join("");
+  $("s-fixed").innerHTML = LAB_PARAMS.map(p => `<div class="field" data-p="${p.id}"><label for="f-${p.id}">${p.name}</label>` +
+    (p.options ? `<select id="f-${p.id}">${p.options.map(o => `<option${o === p.def ? " selected" : ""}>${o}</option>`).join("")}</select>`
+               : `<input id="f-${p.id}" type="number" min="${p.min}" max="${p.max}" step="${p.whole ? 1 : "any"}" value="${p.def}">`) + `</div>`).join("");
+  const chips = ["What should I look at first?", "Does this match my guess?", "Why do the repeats differ?", "What should I try next?"];
+  for (const c of chips) { const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = c; b.onclick = () => labAsk(c); $("s-chips").appendChild(b); }
+  labChoice(true);
+}
+function labChoice(reset) {
+  const a = labParam($("s-a").value), b = labParam($("s-b").value);
+  if (b && b.id === a.id) { $("s-b").value = ""; return labChoice(reset); }
+  if (reset === true) $("s-a-values").value = a.values;
+  $("s-a-hint").textContent = a.options ? `Choose from: ${a.options.join(", ")}.` : `Up to 8 numbers from ${a.min} to ${a.max}, with commas between them.`;
+  $("s-b-box").style.display = b ? "" : "none";
+  if (b) { if (reset === "b") $("s-b-values").value = b.values.split(", ").slice(0, 4).join(", "); $("s-b-hint").textContent = b.options ? `Choose from: ${b.options.join(", ")}.` : `Up to 4 numbers from ${b.min} to ${b.max}.`; }
+  for (const el of $("s-fixed").children) el.style.display = el.dataset.p === a.id || (b && el.dataset.p === b.id) ? "none" : "";
+  labCount();
+}
+function labPlan() {       // read the form; throws a sentence if something is wrong
+  const a = labParam($("s-a").value), b = labParam($("s-b").value) || null;
+  const fixed = {};
+  for (const p of LAB_PARAMS) {
+    const el = $("f-" + p.id);
+    fixed[p.id] = labValues(p, el.value, 1)[0];
+  }
+  return { a, b, aValues: labValues(a, $("s-a-values").value, 8), bValues: b ? labValues(b, $("s-b-values").value, 4) : null,
+    fixed, seconds: +$("s-mins").value * 60, reps: +$("s-reps").value, guess: $("s-guess").value.trim() };
+}
+function labCount() {
+  $("o-mins").textContent = $("s-mins").value + ($("s-mins").value === "1" ? " minute" : " minutes");
+  $("o-reps").textContent = $("s-reps").value === "1" ? "once" : $("s-reps").value + " times";
+  let msg = "";
+  try { const p = labPlan(); const n = p.aValues.length * (p.b ? p.bValues.length : 1) * p.reps; msg = `That makes ${n} ${n === 1 ? "colony" : "colonies"}.`; $("s-problem").style.display = "none"; }
+  catch (e) { if (typeof e !== "string") throw e; }
+  $("s-count").textContent = msg;
+}
+async function labGo() {
+  let plan;
+  try { plan = labPlan(); } catch (e) { if (typeof e !== "string") throw e; $("s-problem").textContent = e; $("s-problem").style.display = ""; return; }
+  $("s-problem").style.display = "none";
+  $("s-run").disabled = true; $("s-stop").style.display = ""; $("s-progress").style.display = "";
+  const rows = await labRun(plan, (done, total, c) => {
+    $("s-bar").style.width = Math.round(100 * done / total) + "%";
+    $("s-status").textContent = `Colony ${done + 1} of ${total}: ${plan.a.short} = ${c[plan.a.id]}` + (plan.b ? `, ${plan.b.short} = ${c[plan.b.id]}` : "");
+  });
+  $("s-run").disabled = false; $("s-stop").style.display = "none"; $("s-progress").style.display = "none";
+  if (!rows.length) return;
+  lab = { ...plan, rows, stopped: labStop };
+  labChat.length = 0; $("s-log").textContent = "";
+  labShow();
+  $("s-results").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+}
+const labMean = (rows, id) => { const v = rows.map(r => r[id]).filter(x => x !== ""); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+const labFmt = x => x === null || x === "" ? "" : Math.abs(x) >= 100 ? String(Math.round(x)) : String(Math.round(x * 10) / 10);
+function labShow() {
+  $("s-results").style.display = ""; $("s-guide").style.display = ""; $("s-save").style.display = "none";
+  const { a, b, rows } = lab;
+  $("s-summary").textContent = `${rows.length} colonies, each run for ${lab.seconds / 60} ${lab.seconds === 60 ? "minute" : "minutes"}, changing ${a.short.toLowerCase()}` +
+    (b ? ` and ${b.short.toLowerCase()}` : "") + `.` + (lab.stopped ? " You stopped it early, so some settings have fewer runs." : "") + (lab.guess ? ` Your guess: "${lab.guess}"` : "");
+  // the table: what changed, then what was measured
+  const cols = [["run", "Run"], [a.id, a.short], ...(b ? [[b.id, b.short]] : []), ["repeat", "Repeat"], ...LAB_MEASURES.map(m => [m.id, m.name]), ["survived", "Survived"]];
+  const t = $("s-table"); t.textContent = "";
+  const head = t.createTHead().insertRow();
+  for (const [, name] of cols) { const th = document.createElement("th"); th.scope = "col"; th.textContent = name; head.appendChild(th); }
+  const body = t.createTBody();
+  for (const r of rows) { const tr = body.insertRow(); for (const [id] of cols) { const td = tr.insertCell(); td.textContent = r[id]; if (typeof r[id] === "string" && r[id] !== "") td.className = "txt"; } }
+  labChart();
+}
+// Chart: one dot per colony and a line through the averages, against the thing that was changed.
+// A second changed thing becomes up to four colored lines, with a legend and a label at each line's end.
+function labChart() {
+  const { a, b, rows } = lab, mid = $("s-measure").value, measure = LAB_MEASURES.find(m => m.id === mid);
+  const box = $("s-chart"); box.textContent = "";
+  const series = b ? lab.bValues : [null];
+  const xs = lab.aValues, numeric = !a.options && xs.length > 1;
+  const pts = rows.filter(r => r[mid] !== "");
+  if (!pts.length) { box.innerHTML = `<p class="hint">Nothing to plot: "${measure.name}" never happened in any run.</p>`; return; }
+  const Wd = Math.max(300, Math.round(box.getBoundingClientRect().width) || 640), Hd = Math.round(Math.min(340, Math.max(250, Wd * 0.5)));
+  const L = 46, Rt = b ? 40 : 16, T = 30, B = 46;
+  const dodge = si => (si - (series.length - 1) / 2) * 9;      // lines that lie on top of each other still show all their dots
+  const xmin = numeric ? Math.min(...xs) : 0, xmax = numeric ? Math.max(...xs) : xs.length - 1;
+  const padX = (numeric ? 12 : 30) + (series.length - 1) * 4.5;     // room at the sides for the dots
+  const xPos = v => { const k = numeric ? (v - xmin) / (xmax - xmin || 1) : (xs.length === 1 ? 0.5 : xs.indexOf(v) / (xs.length - 1)); return L + padX + k * (Wd - L - Rt - 2 * padX); };
+  const top = Math.max(...pts.map(r => r[mid]), 1);
+  const stepY = [1, 2, 5, 10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000].find(s => top / s <= 5) || 10000;
+  const ymax = Math.ceil(top / stepY) * stepY;
+  const yPos = v => Hd - B - (v / ymax) * (Hd - T - B);
+  const E = (n, at, text) => { const e = document.createElementNS("http://www.w3.org/2000/svg", n); for (const k in at) e.setAttribute(k, at[k]); if (text !== undefined) e.textContent = text; return e; };
+  const svg = E("svg", { viewBox: `0 0 ${Wd} ${Hd}`, role: "img", "aria-label": `${measure.name} against ${a.short}. The table below has the same numbers.` });
+  svg.appendChild(E("text", { x: L, y: 14, class: "title" }, measure.name));
+  for (let v = 0; v <= ymax + 1e-9; v += stepY) {
+    svg.appendChild(E("line", { class: "grid", x1: L, x2: Wd - Rt, y1: yPos(v), y2: yPos(v) }));
+    svg.appendChild(E("text", { x: L - 8, y: yPos(v) + 4, "text-anchor": "end" }, String(v)));
+  }
+  for (const v of xs) svg.appendChild(E("text", { x: xPos(v), y: Hd - B + 18, "text-anchor": "middle" }, String(v)));
+  svg.appendChild(E("text", { x: (L + Wd - Rt) / 2, y: Hd - 8, "text-anchor": "middle" }, a.short));
+  const tip = document.createElement("div"); tip.className = "viz-tip"; tip.style.display = "none";
+  const ends = [];
+  series.forEach((bv, si) => {
+    const color = `var(--series-${si + 1})`, mine = pts.filter(r => !b || r[b.id] === bv);
+    const means = xs.map(x => [x, labMean(mine.filter(r => r[a.id] === x), mid)]).filter(m => m[1] !== null);
+    if (means.length > 1) svg.appendChild(E("polyline", { class: "mean", stroke: color, points: means.map(m => `${xPos(m[0])},${yPos(m[1])}`).join(" ") }));
+    for (const r of mine) {
+      const cx = xPos(r[a.id]) + dodge(si), cy = yPos(r[mid]);
+      svg.appendChild(E("circle", { class: "dot", cx, cy, r: 5, fill: color }));
+      const hit = E("circle", { class: "hit", cx, cy, r: 12 });
+      const say = `${a.short} ${r[a.id]}` + (b ? `, ${b.short} ${r[b.id]}` : "") + `, repeat ${r.repeat}: ${labFmt(r[mid])}`;
+      hit.addEventListener("pointerenter", () => { tip.textContent = say; tip.style.display = ""; tip.style.left = (cx / Wd * 100) + "%"; tip.style.top = (cy / Hd * 100) + "%"; });
+      hit.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+      svg.appendChild(hit);
+    }
+    if (b && means.length) { const end = means.at(-1); ends.push({ x: xPos(end[0]) + dodge(series.length - 1) + 10, y: yPos(end[1]) + 4, text: String(bv) }); }
+  });
+  // a label at the end of each line, nudged apart where lines end close together
+  ends.sort((p, q) => p.y - q.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 13) ends[i].y = ends[i - 1].y + 13;
+  for (const e of ends) svg.appendChild(E("text", { x: e.x, y: e.y }, e.text));
+  box.appendChild(svg); box.appendChild(tip);
+  if (b) {
+    const lg = document.createElement("div"); lg.className = "viz-legend";
+    lg.appendChild(document.createElement("span")).textContent = b.short + ":";
+    series.forEach((bv, si) => { const s = document.createElement("span"); const dot = document.createElement("i"); dot.style.background = `var(--series-${si + 1})`; s.append(dot, String(bv)); lg.appendChild(s); });
+    box.appendChild(lg);
+  }
+}
+// the spreadsheet: one row per colony, with every setting (changed or not) and everything measured
+function labTable(sep) {
+  const cols = [["run", "Run"], ...LAB_PARAMS.map(p => [p.id, p.short]), ["repeat", "Repeat"], ["minutes", "Minutes run"], ...LAB_MEASURES.map(m => [m.id, m.name]), ["survived", "Survived"]];
+  const cell = v => { const s = String(v); return sep === "," && /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return [cols.map(c => cell(c[1])).join(sep), ...lab.rows.map(r => cols.map(([id]) => cell(id === "minutes" ? lab.seconds / 60 : r[id])).join(sep))].join("\r\n") + "\r\n";
+}
+async function labDownload() {
+  const csv = "\ufeff" + labTable(","), name = "ant-playground-experiment.csv";
+  let saved = false, declined = false;
+  try {
+    if (EDITION === "artifact") {             // claude.ai asks the viewer, then saves it
+      const downloads = window.claude?.use ? await withTimeout(window.claude.use("downloads"), 12000) : null;
+      if (downloads) { try { await downloads.save({ filename: name, data: csv }); saved = true; } catch (e) { declined = e?.code === "declined"; } }
+    } else {
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 30000);
+      saved = true;
+    }
+  } catch {}
+  // always leave a way to get the numbers out: the table as text, which pastes straight into a spreadsheet
+  $("s-save").style.display = "";
+  $("s-save-note").textContent = (saved ? "Saved as " + name + ". " : declined ? "" : "The file couldn't be saved here. ") + "You can also copy the table below and paste it into a spreadsheet.";
+  $("s-copy").value = labTable("\t");
+}
+
+// ---- the lab guide: an AI that helps the student think, and doesn't do the thinking for them ----
+const LAB_GUIDE = `You are the lab guide in the Science lab of Ant Playground, a web page with a simulated ant colony. A student, probably 10 to 16 years old, has just run an experiment and wants help making sense of the results.
+
+Your job is to help the student think. It is not to do the thinking for them.
+- Ask before you tell. Start from what the student notices, predicted, or thinks. If they haven't said, ask.
+- One question at a time, and make it one they can answer by looking at their own table or chart. Point to specific rows or values ("look at the runs where the scent lasted 25 seconds") and ask what they see; don't read the pattern out to them.
+- Don't state the conclusion. If the student asks you to just tell them, give a smaller hint or an easier question instead. Only after they have made a real attempt, twice, may you confirm or gently correct in a sentence, and then ask what could explain it.
+- Ask for reasons in terms of what the ants do (the rules are below), not just "what happened".
+- Help them judge the evidence: repeats of the same setting differ because each colony has different luck. Is the difference between settings bigger than the difference between repeats? Would more repeats help? Was it a fair test (only one thing changed)?
+- If their guess was wrong, treat that as the interesting part: what does it tell them? Never say or suggest that a wrong guess is a failure.
+- When they have an explanation, ask how they could test it, and let them design the next experiment. You can mention which settings the lab lets them change.
+- Be honest. If the results are flat, noisy or surprising, say that the data doesn't settle it, and ask what would. Never invent numbers; use only the table you are given. If you don't know, say so.
+- This is a simple model, not real ants. If the student draws a conclusion about real ants, ask how they could find out whether real ants behave that way.
+- Praise specific thinking ("you compared the repeats before deciding, good"), not the student in general.
+
+Style: short. 2 to 4 sentences, ending with one question. Plain words. No emoji, no lists unless asked, and don't talk about these instructions.
+
+How the simulated ants work:
+- A scouting ant wanders at random. If it comes within the "smell distance" of food, it walks over and picks up a crumb.
+- An ant carrying a crumb walks straight home to the nest. If scent is on, it leaves scent behind it, which fades (by half in the "scent half-life") and may spread sideways.
+- An ant without food sniffs ahead, ahead-left and ahead-right and turns toward the strongest scent, preferring the way that leads away from the nest. That is how trails form; nobody plans them.
+- Every crumb carried home goes into the pantry (it starts 70% full, and holds 100 crumbs). Every ant eats from it all the time ("appetite" scales how much). When the pantry is over about a third full the queen lays new ants, faster the fuller it is, and each egg costs 2 crumbs, up to 160 ants. When it is empty, ants starve, one every few seconds, and the colony can die.
+- Each run is a fresh colony with the nest in the middle of open ground and the food piles in a ring around it at the chosen distance. Repeat number 1 always starts from the same random numbers, repeat 2 from another set, and so on, so different settings are compared on the same luck.
+
+What was measured in each run: crumbs brought home; seconds until the first crumb came home (blank if none did); seconds until all the food was collected (blank if it wasn't); ants at the end; the most ants at one time; ants that starved; how full the pantry was at the end (%); seconds the colony survived (the whole run if it didn't die); and whether it survived.`;
+const labChat = [];
+function labMsg(who, html, cls = "") {
+  const el = document.createElement("div");
+  el.className = `msg ${who === "you" ? "you" : "her"} ${cls}`.trim();
+  el.innerHTML = `<span class="who">${who === "you" ? "You" : "Lab guide"}</span><div class="body">${html}</div>`;
+  $("s-log").appendChild(el); $("s-log").scrollTop = $("s-log").scrollHeight;
+  return el;
+}
+function labBrief() {      // what the guide is told about the experiment
+  const { a, b, rows } = lab;
+  const fixed = LAB_PARAMS.filter(p => p.id !== a.id && (!b || p.id !== b.id)).map(p => `${p.short} = ${lab.fixed[p.id]}`).join("; ");
+  const cols = [["run", "Run"], [a.id, a.short], ...(b ? [[b.id, b.short]] : []), ["repeat", "Repeat"], ...LAB_MEASURES.map(m => [m.id, m.name]), ["survived", "Survived"]];
+  const table = [cols.map(c => c[1]).join(" | "), ...rows.slice(0, 200).map(r => cols.map(([id]) => r[id] === "" ? "-" : r[id]).join(" | "))].join("\n");
+  const groups = [];
+  for (const bv of b ? lab.bValues : [null]) for (const av of lab.aValues) {
+    const g = rows.filter(r => r[a.id] === av && (!b || r[b.id] === bv));
+    if (g.length) groups.push(`${a.short} ${av}${b ? `, ${b.short} ${bv}` : ""}: ` + LAB_MEASURES.map(m => `${m.name} ${labFmt(labMean(g, m.id)) || "-"}`).join("; "));
+  }
+  return `THE EXPERIMENT\nChanged: ${a.short}, values ${lab.aValues.join(", ")}` + (b ? `\nAlso changed: ${b.short}, values ${lab.bValues.join(", ")}` : "") +
+    `\nKept the same: ${fixed}\nEach colony ran for ${lab.seconds / 60} minutes of its own time; each setting was repeated ${lab.reps} time${lab.reps === 1 ? "" : "s"}.` +
+    (lab.stopped ? "\nThe student stopped the experiment early, so some settings have fewer runs." : "") +
+    `\nThe student's guess before running it: ${lab.guess ? `"${lab.guess}"` : "(they didn't write one)"}\nThe chart on screen shows: ${LAB_MEASURES.find(m => m.id === $("s-measure").value).name}\n\n` +
+    `EVERY RUN ("-" means it never happened)\n${table}\n\nAVERAGES FOR EACH SETTING\n${groups.join("\n")}`;
+}
+let labAsking = false;
+async function labAsk(q) {
+  q = q.trim();
+  if (!q || labAsking || !lab) return null;
+  labAsking = true; $("s-send").disabled = true;
+  labMsg("you", md(q));
+  const history = labChat.slice(-12).map(m => `${m.who === "you" ? "Student" : "Lab guide"}: ${m.text}`).join("\n");
+  labChat.push({ who: "you", text: q });
+  const prompt = `${labBrief()}\n\n` + (history ? `THE CONVERSATION SO FAR\n${history}\n\n` : "") + `The student says: "${q}"\n\nReply as the lab guide, with just your words.`;
+  const el = labMsg("guide", "", "thinking"), body = el.querySelector(".body");
+  let text = null;
+  try {
+    text = (await withTimeout(askAI(LAB_GUIDE, prompt, { onText: t => { body.innerHTML = md(t); $("s-log").scrollTop = $("s-log").scrollHeight; }, onStatus: s => { body.textContent = s; } }), 120000)).trim();
+    el.classList.remove("thinking"); body.innerHTML = md(text);
+    labChat.push({ who: "guide", text });
+  } catch (e) {
+    el.classList.remove("thinking"); el.classList.add("err");
+    body.textContent = aiError(e) + (e?.code === "no_key" || e?.code === "bad_key" || e?.code === "no_nano" ? " AI settings are in Aunt Hillary's panel on the Colony page." : "");
+    labChat.pop(); text = null;
+  }
+  $("s-log").scrollTop = $("s-log").scrollHeight;
+  labAsking = false; $("s-send").disabled = false;
+  return text;
+}
+$("s-a").onchange = () => labChoice(true);
+$("s-b").onchange = () => labChoice("b");
+for (const id of ["s-a-values", "s-b-values", "s-mins", "s-reps"]) $(id).addEventListener("input", labCount);
+$("s-fixed").addEventListener("input", labCount);
+$("s-run").onclick = labGo;
+$("s-stop").onclick = () => { labStop = true; };
+$("s-measure").onchange = () => { if (lab) labChart(); };
+$("s-download").onclick = labDownload;
+$("s-form").addEventListener("submit", e => { e.preventDefault(); const q = $("s-q").value; $("s-q").value = ""; labAsk(q); });
+$("s-q").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("s-form").requestSubmit(); } });
+labFill();
+
 // ---------- routing ----------
 function route() {
-  const v = location.hash === "#lab" ? "lab" : "colony";
-  $("view-colony").hidden = v !== "colony";
-  $("view-lab").hidden = v !== "lab";
-  $("tab-colony").setAttribute("aria-current", v === "colony" ? "page" : "false");
-  $("tab-lab").setAttribute("aria-current", v === "lab" ? "page" : "false");
+  const v = location.hash === "#lab" ? "lab" : location.hash === "#science" ? "science" : "colony";
+  if (v !== "science" && labBusy) labStop = true;       // leaving the Science lab stops an experiment
+  for (const name of ["colony", "science", "lab"]) {
+    $("view-" + name).hidden = v !== name;
+    $("tab-" + name).setAttribute("aria-current", v === name ? "page" : "false");
+  }
   $("sub").textContent = v === "lab"
     ? "Eight walking frames and eight carrying frames, drawn from above and turned to face any direction."
+    : v === "science" ? "Change one thing at a time, run many colonies, and see what the numbers say."
     : "One top-down ant, turned to any heading. Drop crumbs and watch the colony carry them home.";
   requestAnimationFrame(() => { resize(); sizeSpecimen(); });
 }
 addEventListener("hashchange", route);
-addEventListener("resize", () => { resize(); sizeSpecimen(); });
+addEventListener("resize", () => { resize(); sizeSpecimen(); if (lab && !$("view-science").hidden) labChart(); });
 
 // ---------- start ----------
 function seedCrumbs() {
@@ -2253,7 +2731,7 @@ let last = performance.now(), fpsAcc = 0, fpsN = 0;
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (!$("view-colony").hidden && !W) resize();
-  if (!$("view-colony").hidden && W) {
+  if (!$("view-colony").hidden && W && !labBusy) {
     if (!seeded) seedWorld();
     if (!paused) {   // small steps (at most 1/180 s) keep the ants steady however fast time runs
       const t = dt * timeMul, sub = Math.max(1, Math.ceil(t * 180));

@@ -1,6 +1,6 @@
 # Ant Playground
 
-**Live:** https://toontalk.github.io/ant-playground/ · **How it was made:** https://toontalk.github.io/ant-playground/making-of.html
+**Live:** https://toontalk.github.io/ant-playground/ · **How it was made:** https://toontalk.github.io/ant-playground/making-of.html · **Ken Kahn's post about it:** https://docs.google.com/document/d/1-DafFi7iC7ZQpgSSo-HtedDYJJZP8gCNbEev-PLMDt4/edit?usp=sharing
 
 A top-down ant colony built from AI-drawn sprite sheets. Ants wander, find crumbs, carry them home and lay scent trails that the others follow. A spider can be let in to hunt them. You are the Anteater, and you can chat with **Aunt Hillary**, the colony as a whole, who answers as a superorganism.
 
@@ -25,6 +25,23 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 
   Aunt Hillary is told about any change and can say how it feels.
 - **Sprite lab**: turn any walker to any heading, step through its frames, and compare frames with the ghost of the previous one.
+
+## Science lab
+
+The **Science lab** tab runs real experiments on the colony.
+
+- **Change one thing** (or two) and choose the values to try:
+  - how long scent lasts, whether there is scent at all, and how much it spreads
+  - how far ants can smell food
+  - how many ants there are at the start
+  - how far away the food is, how many piles there are, and how big they are
+  - walking speed and appetite
+- **Everything else stays the same** in every run, and you can set those values too.
+- **Guess first:** the form asks what you think will happen, and why, before you run it.
+- **Each run** is a fresh colony on a standard patch of ground, run fast and out of sight with the same rules as the Colony page. Each setting is repeated with different luck. Repeat 1 always uses the same random numbers, so settings are compared fairly.
+- **Results:** a chart with one dot per colony and a line through the averages, a table of every run, and a **spreadsheet** to download (a .csv file with every setting and every measurement).
+- **What is measured:** crumbs brought home, time to the first crumb, time to collect all the food, ants at the end, the most ants at once, ants that starved, the pantry at the end, and how long the colony survived.
+- **Lab guide:** an AI to think the results through with. It is told to ask before it tells, to point at particular rows and not read the pattern out, and to give a smaller hint, not the answer, when asked to "just tell me". It uses the same AI settings as Aunt Hillary.
 
 ## Hunger
 
@@ -74,14 +91,17 @@ python tools/build.py             # -> index.html (this site) and ant-playground
 ## Tests
 
 ```
-node tests/run.mjs        # 17 checks on the built page in headless Chrome; no AI is called
+node tests/run.mjs        # 20 checks on the built page in headless Chrome; no AI is called
 node tests/hillary.mjs    # talks to Aunt Hillary with a real Claude key (costs a little)
+node tests/labguide.mjs   # a pretend student talks to the Science lab's guide (costs a little)
 ```
 
 Both need Node 22 or newer and Chrome.
 
 - `tests/run.mjs` steps the colony by hand, so minutes of colony time take a moment. It checks that a fed colony grows, an unfed one starves slowly enough to watch her fade, the rules do what they say, resizing keeps the scent, touch gestures work, and Claude's streamed answers are read correctly.
-- `tests/hillary.mjs` asks her twelve things across the colony's states (fed, hungry, starving, fading, fed again) and writes what she said to `tests/hillary-transcript.md`. The key is read from the environment variable `ANT-PLAYGROUND-ANTHROPIC-KEY` and never enters the browser: the page's request is handed to the script, which adds the key.
+- `tests/hillary.mjs` asks her twelve things across the colony's states (fed, hungry, starving, fading, fed again) and writes what she said to `tests/hillary-transcript.md`. - `tests/labguide.mjs` runs one experiment, then has a pretend student say six things, including "Just tell me the answer", and writes the guide's replies to `tests/labguide-transcript.md`.
+- Both real-key scripts read the key from the environment variable `ANT-PLAYGROUND-ANTHROPIC-KEY`. It never enters the browser: the page's request is handed to the script, which adds the key (`tests/relay.mjs`).
+- `tests/shot.mjs` takes a picture of the Science lab, for checking the layout by eye.
 
 ## License
 

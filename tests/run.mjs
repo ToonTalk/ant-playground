@@ -224,6 +224,62 @@ await test("Claude's streamed answer is read correctly, with a retry when extras
   assert(s.refused === "refused" && s.bad === "bad_key", `${s.refused} ${s.bad}`);
 });
 
+await test("Science lab: runs repeat exactly, differ between settings, and leave the live colony untouched", async () => {
+  const s = await run(`const live = () => JSON.stringify({ ants: ants.length, pantry, W, H, simTime, crumbs: crumbs.length, delivered, scent: trail.reduce((a, b) => a + b, 0), rules, born: tally.born });
+    const before = live();
+    const fixed = Object.fromEntries(LAB_PARAMS.map(p => [p.id, p.def]));
+    const plan = { a: labParam("scent"), b: null, aValues: ["off", "on"], bValues: null, fixed, seconds: 180, reps: 2 };
+    const t0 = performance.now(); const rows = await labRun(plan); const ms = performance.now() - t0;
+    const again = await labRun(plan);
+    const mean = v => rows.filter(r => r.scent === v).reduce((a, r) => a + r.home, 0) / 2;
+    return { n: rows.length, same: JSON.stringify(rows) === JSON.stringify(again), restored: before === live(), busy: labBusy, off: mean("off"), on: mean("on"),
+      repeatsDiffer: rows[0].home !== rows[1].home, msPerColonyMinute: Math.round(ms / (4 * 3)), first: rows[2] };`);
+  assert(s.n === 4 && s.same, "the same plan should give the same rows");
+  assert(s.restored && !s.busy, "the live colony should be exactly as it was");
+  assert(s.on > s.off * 1.3, `scent should help at this distance: ${s.off} crumbs without, ${s.on} with`);
+  assert(s.repeatsDiffer, "repeats should differ from each other");
+  return `${s.off} crumbs home without scent, ${s.on} with; ${s.msPerColonyMinute} ms per colony-minute`;
+});
+
+await test("Science lab: the form runs an experiment and shows a chart, a table and a spreadsheet", async () => {
+  const s = await run(`location.hash = "#science"; await new Promise(r => setTimeout(r, 100));
+    const set = (id, v) => { $(id).value = v; $(id).dispatchEvent(new Event("input", { bubbles: true })); $(id).dispatchEvent(new Event("change", { bubbles: true })); };
+    set("s-a", "halfLife"); set("s-a-values", "2, 11, 40"); set("s-b", "distance"); set("s-b-values", "5, 10"); set("s-mins", 2); set("s-reps", 2);
+    $("s-guess").value = "Longer-lasting scent will bring more food home";
+    const count = $("s-count").textContent;
+    // a bad value is explained, and nothing runs
+    set("s-a-values", "2, 500"); $("s-run").click(); await new Promise(r => setTimeout(r, 50));
+    const problem = $("s-problem").style.display !== "none" ? $("s-problem").textContent : "";
+    set("s-a-values", "2, 11, 40");
+    await labGo();
+    const rowsShown = $("s-table").tBodies[0].rows.length, head = [...$("s-table").tHead.rows[0].cells].map(c => c.textContent);
+    const dots = document.querySelectorAll("#s-chart .dot").length, lines = document.querySelectorAll("#s-chart .mean").length, legend = document.querySelector("#s-chart .viz-legend")?.textContent;
+    set("s-measure", "antsEnd"); const title = document.querySelector("#s-chart .title").textContent;
+    const csv = labTable(",").trim().split("\\r\\n"), brief = labBrief();
+    await labDownload();
+    location.hash = "#colony"; await new Promise(r => setTimeout(r, 100));
+    return { count, problem, rowsShown, head, dots, lines, legend, title, csvRows: csv.length, csvHead: csv[0], csvFirst: csv[1], saveNote: $("s-save-note").textContent, copy: $("s-copy").value.split("\\n")[0],
+      brief: brief.slice(0, 900), guideShown: $("s-guide").style.display !== "none", liveOk: W !== LAB_W && ants.length > 0 };`);
+  assert(/12 colonies/.test(s.count), "count: " + s.count);
+  assert(/between 1 and 120/.test(s.problem), "a bad value should be explained: " + s.problem);
+  assert(s.rowsShown === 12 && s.dots === 12 && s.lines === 2 && /Food distance.*5.*10/.test(s.legend), JSON.stringify({ rows: s.rowsShown, dots: s.dots, lines: s.lines, legend: s.legend }));
+  assert(s.head.includes("Scent half-life (s)") && s.head.includes("Crumbs brought home") && s.title === "Ants at the end", s.head.join(" | "));
+  assert(s.csvRows === 13 && /^Run,Scent half-life \(s\),Scent,/.test(s.csvHead) && /Minutes run/.test(s.csvHead) && /^1,2,on,0,2,40,5,2,300,1,1,1,2,/.test(s.csvFirst), s.csvHead + " / " + s.csvFirst);
+  assert(/Saved as ant-playground-experiment.csv/.test(s.saveNote) && /^Run\t/.test(s.copy), s.saveNote);
+  assert(/Changed: Scent half-life/.test(s.brief) && /Longer-lasting scent/.test(s.brief) && s.guideShown && s.liveOk, JSON.stringify({ guide: s.guideShown, live: s.liveOk }) + " " + s.brief);
+});
+
+await test("Science lab: the guide is given the results and told to ask, not tell", async () => {
+  const s = await run(`const fixed = Object.fromEntries(LAB_PARAMS.map(p => [p.id, p.def]));
+    const plan = { a: labParam("ants"), b: null, aValues: [5, 40], bValues: null, fixed, seconds: 60, reps: 1, guess: "" };
+    lab = { ...plan, rows: await labRun(plan), stopped: false };
+    let got = null; ai.provider = "claude"; sampleFn = async msgs => { got = msgs[0].content; return { text: "What do you notice about the two rows?" }; };
+    const reply = await labAsk("Just tell me the answer");
+    return { reply, sys: /Ask before you tell/.test(got) && /Don't state the conclusion/.test(got), table: /EVERY RUN/.test(got) && /Ants at start \\| Repeat/.test(got),
+      guess: /they didn't write one/.test(got), said: /The student says: "Just tell me the answer"/.test(got), log: $("s-log").children.length };`);
+  assert(s.reply && s.sys && s.table && s.guess && s.said && s.log === 2, JSON.stringify(s));
+});
+
 await page.close();
 if (page.errors.length) console.log("\npage errors:\n  " + [...new Set(page.errors)].join("\n  "));
 const failed = results.filter(r => !r.ok).length;
