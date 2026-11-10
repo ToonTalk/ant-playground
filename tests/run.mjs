@@ -116,6 +116,34 @@ await test("the Ants slider hatches ants from the nest and lets them die in plac
   assert(s.up === 90 && s.born >= 45 && s.down === 30 && s.wished === 60 && s.bodies > 0, JSON.stringify(s));
 });
 
+await test("pointers: the pile picture for crumbs; one spider at a time, with a plain arrow while it hunts", async () => {
+  const s = await run(`${STEP} const cur = () => world.style.cursor;
+    setTool("crumb"); const crumb = cur();
+    setTool("spider"); const before = cur();
+    dropSpider(W * 0.6, H * 0.5); const during = cur(); dropSpider(W * 0.3, H * 0.3); const count = spiders.length, tip = $("tip").textContent;
+    let t = 0; while (spiders.length && t < 120) { stepFor(1); t++; }
+    return { crumb: crumb.slice(0, 26), before, during, count, tip, after: cur() };`);
+  assert(s.crumb.startsWith('url("data:image/png;base64'), "the crumb pointer should be a picture: " + s.crumb);
+  assert(s.before === "none" && s.during === "default" && s.after === "none", `${s.before} / ${s.during} / ${s.after}`);
+  assert(s.count === 1 && /One spider at a time/.test(s.tip), `${s.count} spiders; tip: ${s.tip}`);
+});
+
+await test("the What she feels tab shows what the AI is told, and asking returns to the conversation", async () => {
+  const s = await run(`ai.provider = "claude"; sampleFn = async () => ({ text: "Quite well." });
+    $("t-feel").click();
+    const labels = [...document.querySelectorAll("#g-sense dt")].map(d => d.textContent);
+    const ants = [...document.querySelectorAll("#g-sense dt")].find(d => d.textContent === "Ants")?.nextElementSibling.textContent;
+    const shown = { feel: $("g-feel").style.display !== "none", talk: $("g-scroll").style.display !== "none", form: $("g-form").getBoundingClientRect().height > 0 };
+    events.push({ t: simTime, text: "Something happened." }); showTab("feel");
+    const happenings = document.querySelectorAll("#g-sense dd ul li").length;
+    await speak("How are you?");
+    return { labels, ants, shown, happenings, backToTalk: $("g-scroll").style.display !== "none" && $("g-feel").style.display === "none", selected: $("t-talk").getAttribute("aria-selected") };`);
+  for (const l of ["Ants", "Teams right now", "Hunger", "Scent", "Danger", "My mind"]) assert(s.labels.includes(l), "missing " + l + ": " + s.labels.join(", "));
+  assert(/^\d+\. In the last minute/.test(s.ants), "Ants line: " + s.ants);
+  assert(s.shown.feel && !s.shown.talk && s.shown.form && s.happenings >= 1, JSON.stringify(s.shown) + " happenings " + s.happenings);
+  assert(s.backToTalk && s.selected === "true", "asking should return to the Talk tab");
+});
+
 await test("resizing keeps the scent and moves spiders with the ground", async () => {
   await run(`dropSpider(W * 0.5, H * 0.5); window.__before = { W, H, scent: trail.reduce((a, b) => a + b, 0), sx: spiders[0].x / W, sy: spiders[0].y / H }; return 0;`);
   await page.setSize(1700, 1000);

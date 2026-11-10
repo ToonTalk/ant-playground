@@ -4,7 +4,7 @@
 
 A top-down ant colony built from AI-drawn sprite sheets. Ants wander, find crumbs, carry them home and lay scent trails that the others follow. A spider can be let in to hunt them. You are the Anteater, and you can chat with **Aunt Hillary**, the colony as a whole, who answers as a superorganism.
 
-Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's *Gödel, Escher, Bach* (1979). In the book, no single ant understands anything, but the colony as a whole can think and talk. Real colonies don't talk or think in words. Scientists do call a colony a *superorganism*, because many ants following simple rules work together like one living thing with no ant in charge. Aunt Hillary imagines what that whole might say if it had a point of view. Here she is played by an AI, which is told to say plainly that she's make-believe if anyone asks. With each question it is sent a plain-words summary of what the colony is doing right now, and you can read that summary under "What she can feel right now".
+Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's *Gödel, Escher, Bach* (1979). In the book, no single ant understands anything, but the colony as a whole can think and talk. Real colonies don't talk or think in words. Scientists do call a colony a *superorganism*, because many ants following simple rules work together like one living thing with no ant in charge. Aunt Hillary imagines what that whole might say if it had a point of view. Here she is played by an AI, which is told to say plainly that she's make-believe if anyone asks. With each question it is sent a plain-words summary of what the colony is doing right now, and you can read that summary in the "What she feels" tab of her panel.
 
 ## What you can do
 
@@ -15,7 +15,7 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
   - The scent there is wiped out.
   - A spider nearby is frightened off.
 - **Anteater**: tap or drag to lick up ants. The pointer becomes the anteater's snout, and the tongue flicks out to where you tap.
-- **Spider**: tap to drop a spider there, up to three at once. Ants that see it run away. Each spider eats three ants and then leaves.
+- **Spider**: tap to drop a spider there, one at a time. Ants that see it run away. It eats three ants and then leaves. While it is out, the pointer is the ordinary arrow.
 - **Time** speeds the whole simulation up or slows it down together. **Walking speed** changes only how fast the ants and spiders walk; everything else keeps its pace, so faster walkers bring home more food than the colony eats, and the game gets easier.
 - **The ants' rules**: a panel under the colony lets you change how the ants behave, with questions to guess at and then try.
   - Whether carrying ants leave scent at all.
@@ -35,7 +35,7 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 - **Her pleas:** as things get worse, Aunt Hillary asks the Anteater for food more often and more desperately. She only asks for food; she never says where to put it.
 - **A fading mind:** a colony thinks with its ants, so below 30 ants her mind begins to fade, whatever the cause.
   - Under 30 she is a little foggy, under 18 confused and forgetful, and under 8 only a few broken words get through.
-  - The AI isn't just told to act confused: what she senses really does arrive with gaps. Whole lines go missing, lost words show as … and lost numbers as ?. "What she can feel right now" shows exactly what got through.
+  - The AI isn't just told to act confused: what she senses really does arrive with gaps. Whole lines go missing, lost words show as … and lost numbers as ?. The "What she feels" tab shows exactly what got through.
   - With voice on, her voice slows and deepens as her mind fades, like a machine running down.
 - **If nobody helps:** the colony dies. You can found a new one, but that Aunt Hillary is a new pattern who remembers nothing of the last.
 
@@ -74,7 +74,7 @@ python tools/build.py             # -> index.html (this site) and ant-playground
 ## Tests
 
 ```
-node tests/run.mjs        # 15 checks on the built page in headless Chrome; no AI is called
+node tests/run.mjs        # 17 checks on the built page in headless Chrome; no AI is called
 node tests/hillary.mjs    # talks to Aunt Hillary with a real Claude key (costs a little)
 ```
 

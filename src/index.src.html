@@ -102,7 +102,7 @@ h1 em { font-style: normal; color: var(--ant); }
 .colony-row.full .stage, .colony-row.full #world { height: 100%; }
 .colony-row.full .guide { display: none; }
 @media (min-width: 900px) { .colony-row.full { grid-template-columns: minmax(0, 1fr) 340px; } .colony-row.full .guide { display: flex; height: 100%; } }
-.colony-row.full .g-scroll { height: auto; }
+.colony-row.full .g-scroll, .colony-row.full .g-feel { height: auto; }
 .rules summary { cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 15px; }
 .rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 28px; margin: 12px 0 6px; }
 .rules .notes { margin-top: 4px; }
@@ -110,7 +110,7 @@ h1 em { font-style: normal; color: var(--ant); }
 @media (min-width: 1060px) { .colony-row { grid-template-columns: minmax(0, 1fr) 340px; } }
 .guide { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 @media (min-width: 1060px) { .guide { height: clamp(360px, 66vh, 720px); } }
-@media (max-width: 1059px) { .g-scroll { height: 360px; } }
+@media (max-width: 1059px) { .g-scroll, .g-feel { height: 360px; } }
 .g-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .g-head h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 800; letter-spacing: -0.01em; }
 .linkish { all: unset; cursor: pointer; font-size: 13px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
@@ -161,9 +161,19 @@ h1 em { font-style: normal; color: var(--ant); }
 .g-more { font-size: 13.5px; }
 .g-more summary { cursor: pointer; color: var(--muted); }
 .g-more p { margin: 6px 0 0; }
-.g-sense-note { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
-.g-sense summary { cursor: pointer; font-size: 13px; color: var(--muted); }
-.g-sense pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.5px; margin: 6px 0 0; max-height: 220px; overflow: auto; background: var(--loam); padding: 8px; border-radius: 8px; }
+.g-tabs { display: flex; gap: 4px; background: var(--loam); border: 1px solid var(--line); border-radius: 999px; padding: 3px; align-self: flex-start; }
+.g-tabs button { all: unset; cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 13.5px; color: var(--muted); padding: 4px 12px; border-radius: 999px; }
+.g-tabs button[aria-selected="true"] { background: var(--fg); color: var(--loam); }
+.g-tabs button:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+.g-feel { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px; overscroll-behavior: contain; }
+.g-feel:focus-visible { outline: 2px solid var(--ant); outline-offset: 2px; }
+.g-feel-intro { margin: 0 0 8px; font-size: 13.5px; color: var(--muted); }
+.g-sense-note { margin: 0 0 8px; font-size: 13px; color: var(--ant); }
+#g-sense { margin: 0; }
+#g-sense dt { font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 8px; }
+#g-sense dd { margin: 1px 0 0; font-size: 14px; }
+#g-sense ul { margin: 2px 0 0; padding-left: 18px; }
+#g-sense li { margin: 2px 0; }
 .g-settings { display: grid; gap: 8px; font-size: 13.5px; background: var(--loam); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
 .g-settings label { display: grid; gap: 3px; }
 .g-settings select, .g-settings input[type="text"], .g-settings input[type="password"] { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--burrow); color: var(--fg); min-width: 0; }
@@ -292,7 +302,11 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
         <select id="g-voice-pick"></select>
         <button class="linkish" id="g-voice-try" type="button">Try it</button>
       </div>
-      <div class="g-scroll" id="g-scroll">
+      <div class="g-tabs" role="tablist" aria-label="Aunt Hillary">
+        <button role="tab" id="t-talk" type="button" aria-selected="true" aria-controls="g-scroll">Talk</button>
+        <button role="tab" id="t-feel" type="button" aria-selected="false" aria-controls="g-feel" tabindex="-1">What she feels</button>
+      </div>
+      <div class="g-scroll" id="g-scroll" role="tabpanel" aria-labelledby="t-talk">
         <p class="g-intro">Aunt Hillary is a made-up character from Douglas Hofstadter's book <i>Gödel, Escher, Bach</i>: a whole ant colony who can talk. No single ant understands a word, but the colony as a whole does. Here an AI plays her, and you are her old friend, the Anteater.</p>
         <details class="g-more">
           <summary>Is she real?</summary>
@@ -301,8 +315,12 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <p>The ants here are much simpler than real ones. Real ants use many different smells and touches to send messages, and a real colony doesn't starve in a few minutes.</p>
         </details>
         <div class="g-settings" id="g-settings" style="display:none"></div>
-        <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><p class="g-sense-note" id="g-sense-note" style="display:none">With fewer than 30 ants she senses less. Lost words show as … and lost numbers as ?</p><pre id="g-sense"></pre></details>
         <div class="g-log" id="g-log" aria-live="polite"></div>
+      </div>
+      <div class="g-feel" id="g-feel" role="tabpanel" aria-labelledby="t-feel" tabindex="0" style="display:none">
+        <p class="g-feel-intro">This is everything the AI playing Aunt Hillary is told about the colony right now. It changes as the colony does, and she is told nothing else about what's on the screen.</p>
+        <p class="g-sense-note" id="g-sense-note" style="display:none">With fewer than 30 ants she senses less: some lines go missing, lost words show as … and lost numbers as ?</p>
+        <dl id="g-sense"></dl>
       </div>
       <form class="g-ask" id="g-form">
         <div class="ideas">
@@ -724,12 +742,14 @@ function scatter(x, y) {
 
 // ---------- the spider ----------
 const spiderScale = () => antScale() * 3.4 * 30 / EXTRAS.spider.abdomen_px;   // abdomen 3.4× the ant's
-const MAX_SPIDERS = 3;
-// the Spider tool: a spider drops onto the ground where you tap, hunts, eats three ants and leaves
+const MAX_SPIDERS = 1;
+// The Spider tool: a spider drops onto the ground where you tap, hunts, eats three ants and leaves.
+// One at a time: while it is out, the pointer is the ordinary arrow, to show there is none to drop.
 function dropSpider(x, y) {
-  if (spiders.length >= MAX_SPIDERS) { flashTip("Three spiders at once is plenty. Wait for one to leave."); return; }
+  if (spiders.length >= MAX_SPIDERS) { flashTip("One spider at a time. Wait for it to leave, or Scatter near it to frighten it off."); return; }
   spiders.push({ x, y, dir: R() * 360, walked: 0, mode: "hunt", rest: 0.5, meals: 0, pause: 0, burst: 2, drop: 1 });
   note(`The Anteater dropped a spider ${where(x, y)}.`);
+  setCursor();
 }
 function stepSpider(s, dt) {
   if (s.drop > 0) { s.drop = Math.max(0, s.drop - dt / 0.5); return; }   // still falling
@@ -894,7 +914,7 @@ function step(dt) {
   if (!colonyDead && !ants.length && pantry < EGG_COST) colonyDies();
   const weak = pantry <= 0 ? 0.8 : 1;                      // starving ants are sluggish
   for (const sp of spiders) stepSpider(sp, dt);
-  spiders = spiders.filter(sp => !sp.gone);
+  if (spiders.some(sp => sp.gone)) { spiders = spiders.filter(sp => !sp.gone); setCursor(); }
   const sees = 2 * ANT_LEN * sizeMul;          // how close a spider must be before an ant notices
 
   for (const a of ants) {
@@ -1018,7 +1038,7 @@ function render() {
     drawSpiderShadow(g, sp.x + off, sp.y + off, sp.dir, spiderScale());
     drawSpider(g, spiderImg, sp.x, sp.y, sp.dir, Math.floor(sp.walked / (SPIDER_STRIDE * ST * spiderScale())) % 8, ss, 1 - 0.4 * sp.drop);
   }
-  if (tool === "spider" && snout.over && !pointer.down) {   // where the spider will land
+  if (tool === "spider" && snout.over && !pointer.down && !spiders.length) {   // where the spider will land
     drawSpider(g, spiderImg, pointer.x, pointer.y, 90, 0, spiderScale(), 0.4);
   }
   drawSnout(g);
@@ -1218,15 +1238,25 @@ const $ = id => document.getElementById(id);
 const svgCursor = (body, hx = 16, hy = 16, fallback = "crosshair") =>
   `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">${body}</svg>`)}") ${hx} ${hy}, ${fallback}`;
 const CURSORS = {
-  crumb: svgCursor(`<path d="M8 17c-1.5-5 2.5-9 7.5-9 3.5 0 4.5 2 7 2.3 2.6.6 3.8 3.4 2.6 6.8-1.3 4.6-6 5.9-9.6 5.9S9.6 21.4 8 17z" fill="#e2b871" stroke="#3a2614" stroke-width="1.6"/><circle cx="14" cy="14" r="1.3" fill="#b9833f"/><circle cx="19" cy="18" r="1.3" fill="#b9833f"/><circle cx="16" cy="16" r="1" fill="#3a2614"/>`),
+  crumb: "crosshair",          // replaced by the pile picture once the sheets have loaded (crumbCursor)
   lead: "grab",
   leadDown: "grabbing",
   scare: svgCursor(`<g stroke="#1a1511" stroke-width="4" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><g stroke="#fff3d6" stroke-width="2" stroke-linecap="round"><path d="M16 3v6M16 23v6M3 16h6M23 16h6M6.8 6.8l4.2 4.2M21 21l4.2 4.2M6.8 25.2l4.2-4.2M21 11l4.2-4.2"/></g><circle cx="16" cy="16" r="2" fill="#f0b85a" stroke="#1a1511"/>`),
   eat: "none",                // the snout is drawn on the canvas instead
-  spider: "crosshair",
 };
+// the Crumb tool's pointer is the pile it will drop, drawn from the food sheet
+function crumbCursor() {
+  const c = document.createElement("canvas"), FT = EXTRAS.food.tile;
+  c.width = c.height = 48;
+  const g = c.getContext("2d");
+  g.shadowColor = "rgba(20,12,4,0.65)"; g.shadowBlur = 3; g.shadowOffsetY = 1.5;
+  g.drawImage(foodImg, 0, 0, FT, FT, 2, 2, 44, 44);
+  try { CURSORS.crumb = `url(${c.toDataURL("image/png")}) 24 24, crosshair`; } catch {}
+}
 function setCursor() {
-  world.style.cursor = tool === "lead" ? (pointer.down ? CURSORS.leadDown : CURSORS.lead) : CURSORS[tool];
+  world.style.cursor = tool === "lead" ? (pointer.down ? CURSORS.leadDown : CURSORS.lead)
+    : tool === "spider" ? (spiders.length ? "default" : "none")     // the faint spider drawn on the ground is the pointer
+    : CURSORS[tool];
 }
 function setTool(t) {
   tool = t;
@@ -1241,7 +1271,7 @@ const TOUCH_TIPS = {   // shorter, and they say how to scroll the page
   lead: "Hold and drag: nearby ants follow. To scroll, swipe outside the colony.",
   scare: "Tap near ants to scare them. Swipe up or down to scroll.",
   eat: "Tap or drag sideways to lick up ants. Swipe up or down to scroll.",
-  spider: "Tap to drop a spider. It eats three ants, then leaves. Swipe up or down to scroll.",
+  spider: "Tap to drop a spider, one at a time. It eats three ants, then leaves. Swipe up or down to scroll.",
 };
 const tipFor = t => (COARSE && !isFull() ? TOUCH_TIPS : TIPS)[t];
 let tipTimer = 0;
@@ -1254,7 +1284,7 @@ const TIPS = {
   lead: "Hold and drag: nearby ants follow you",
   scare: "Tap near ants to scare them; they bolt, drop what they carry, and lose the trail",
   eat: "You're the anteater: tap or drag to lick up ants. The queen lays new ones at the nest.",
-  spider: "Tap to drop a spider. It hunts, eats three ants, then leaves. Scatter near it to frighten it off."
+  spider: "Tap to drop a spider, one at a time. It hunts, eats three ants, then leaves. Scatter near it to frighten it off."
 };
 $("tool-crumb").onclick = () => setTool("crumb");
 $("tool-lead").onclick = () => setTool("lead");
@@ -1317,7 +1347,7 @@ $("b-clear").onclick = () => {
   groundSeed = (groundSeed * 48271) % 2147483647;
   nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
   W = 0; resize(); trail.fill(0); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
-  spiders = []; spiderEaten = youEaten = 0;
+  spiders = []; spiderEaten = youEaten = 0; setCursor();
   tally.born = tally.starved = tally.wished = 0; bodies = [];
   refound(); pantry = 70;
   note("The ground was swept clean and a new nest dug.");
@@ -1437,7 +1467,7 @@ function sense() {
   const rc = rulesChanged();
   if (rc) L.push(`Changed habits: the Anteater has changed my ants' rules, so now ${rc}.`);
   L.push(`My mind: ${mind()}.`);
-  if (paused) L.push("Time is standing still (the Anteater pressed Pause).");
+  if (paused) L.push("Time: standing still (the Anteater pressed Pause).");
   const recent = events.filter(e => simTime - e.t < 180).slice(-10);
   if (recent.length) {
     L.push("Recent happenings:");
@@ -1467,7 +1497,7 @@ How your ants really work on this page. These are the true rules; when asked, de
 - With a fading mind you also sense less. WHAT YOU FEEL then arrives with gaps: whole lines missing, lost words shown as … and numbers you can't make out shown as ?. That is all you can sense. Don't guess what is missing and don't mention the marks themselves; speak only from what got through, and say so when you can't tell.
 - Keep what you ask for simple. When you need food, just ask for food. Never say where the Anteater should put it: not near the nest, not in any direction, not anywhere. Where to drop it is the Anteater's to work out.
 - Your composure follows your hunger: witty and content when fed; polite but pressing when hungry; urgent when starving; desperate when your ants are dying; and when only a handful are left, your thoughts come out faint and broken, because a colony needs many ants to think at all. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
-- The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), Anteater (licks up ants), and Spider (drops a hunting spider wherever the Anteater taps, up to three at once). Ants that see a spider within about two ant-lengths run; each spider eats three ants and then wanders off. Scatter near a spider frightens it away.
+- The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), Anteater (licks up ants), and Spider (drops a hunting spider wherever the Anteater taps, one at a time). Ants that see a spider within about two ant-lengths run; the spider eats three ants and then wanders off. Scatter near a spider frightens it away.
 
 What you feel right now is given under WHAT YOU FEEL. Speak of it as sensations ("a tickle of scent to the north-east", "a chill where my scouts used to be") and give numbers only when asked. Never make up things that aren't there.
 
@@ -1739,6 +1769,7 @@ async function speak(q, cue, onDone) {
   }
   asking = true; gSend.disabled = true;
   if (q) hush();
+  if (q && gTab !== "talk") showTab("talk");
   if (q) addMsg("you", md(q));
   const history = chat.slice(-10).map(m => `${m.who === "you" ? "Anteater" : "Aunt Hillary"}: ${m.text}`).join("\n");
   if (q) chat.push({ who: "you", text: q });
@@ -2074,13 +2105,52 @@ const smallScreen = () => matchMedia("(max-width: 700px)").matches;
 gQ.addEventListener("focus", () => { if (smallScreen()) $("g-form").classList.add("pinned"); });
 gQ.addEventListener("blur", () => setTimeout(() => $("g-form").classList.remove("pinned"), 300));
 
-// what she feels, for anyone who wants to see what the AI is told
-function showSense() {
-  if (!$("g-sense-box").open) return;
-  $("g-sense").textContent = felt();
-  $("g-sense-note").style.display = clarity() < 1 ? "" : "none";
+// Two tabs: the conversation, and what she feels: exactly what the AI is told, kept up to date.
+let gTab = "talk", shownFelt = null;
+function showTab(t) {
+  gTab = t;
+  for (const [id, panel] of [["talk", "g-scroll"], ["feel", "g-feel"]]) {
+    $(panel).style.display = t === id ? "" : "none";
+    $("t-" + id).setAttribute("aria-selected", String(t === id));
+    $("t-" + id).tabIndex = t === id ? 0 : -1;
+  }
+  shownFelt = null;
+  if (t === "feel") showSense(); else toBottom();
 }
-$("g-sense-box").addEventListener("toggle", showSense);
+$("t-talk").onclick = () => showTab("talk");
+$("t-feel").onclick = () => showTab("feel");
+document.querySelector(".g-tabs").addEventListener("keydown", e => {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  e.preventDefault(); showTab(gTab === "talk" ? "feel" : "talk"); $("t-" + gTab).focus();
+});
+// Each line she is told is "What: the rest"; show the what as a small label. Lines that lost their start
+// (when her senses are fading) get a … for a label.
+function showSense() {
+  if (gTab !== "feel") return;
+  const text = felt();
+  $("g-sense-note").style.display = clarity() < 1 ? "" : "none";
+  if (text === shownFelt) return;
+  shownFelt = text;
+  const dl = $("g-sense");
+  dl.textContent = "";
+  let list = null;
+  const row = (label, words) => {
+    const dt = document.createElement("dt"), dd = document.createElement("dd");
+    dt.textContent = label; dd.textContent = words; dl.append(dt, dd);
+    return dd;
+  };
+  for (const line of text.split("\n")) {
+    if (line.startsWith("- ")) {
+      if (!list) list = row("…", "").appendChild(document.createElement("ul"));
+      list.appendChild(document.createElement("li")).textContent = line.slice(2);
+      continue;
+    }
+    list = null;
+    const m = /^([A-Z][A-Za-z ]{1,22}):\s*(.*)$/.exec(line);
+    const dd = m ? row(m[1], m[2]) : row("…", line);
+    if (m && !m[2]) list = dd.appendChild(document.createElement("ul"));     // "Recent happenings:" and its list
+  }
+}
 setInterval(showSense, 1000);
 
 function showSettings(open) {
@@ -2104,7 +2174,7 @@ function buildSettings() {
       <select id="s-prov">${ids.map(id => `<option value="${id}"${id === ai.provider ? " selected" : ""}>${PROVIDERS[id].label}</option>`).join("")}</select>
     </label>
     <div id="s-keyed"></div>
-    <p>Your question and the summary under "What she can feel right now" are sent to the AI you choose. Keys stay in this browser.</p>`;
+    <p>Your question and the summary in the "What she feels" tab are sent to the AI you choose. Keys stay in this browser.</p>`;
   const drawKeyed = () => {
     const P = PROVIDERS[ai.provider], k = $("s-keyed");
     if (P.local) { k.innerHTML = "<p>Runs inside Chrome on this computer. The first answer can take a while if Chrome needs to download the model.</p>"; return; }
@@ -2202,7 +2272,7 @@ function start() {
   resize(); sizeSpecimen();
   if (W) seedWorld();
   updateLabText();
-  setTool("crumb"); showRules();
+  crumbCursor(); setTool("crumb"); showRules();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
 setupAI();
