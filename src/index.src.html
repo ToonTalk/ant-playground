@@ -2890,7 +2890,7 @@ function seedWorld() {
 }
 let last = performance.now(), fpsAcc = 0, fpsN = 0;
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const real = (now - last) / 1000, dt = Math.min(0.05, real); last = now;
   if (!$("view-colony").hidden && !W) resize();
   if (!$("view-colony").hidden && W && !labBusy) {
     if (!seeded) seedWorld();
@@ -2902,7 +2902,7 @@ function frame(now) {
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 0.5) { $("hud-fps").textContent = Math.round(fpsN / fpsAcc) + " fps"; fpsAcc = 0; fpsN = 0; }
   }
-  if (watch) watchFrame(dt);
+  if (watch) watchFrame(Math.min(0.25, real));     // a replay keeps real time even when frames come slowly
   if (!$("view-lab").hidden) renderLab(dt);
   requestAnimationFrame(frame);
 }
