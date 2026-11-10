@@ -40,6 +40,7 @@ The **Science lab** tab runs real experiments on the colony.
 - **Guess first:** the form asks what you think will happen, and why, before you run it.
 - **Each run** is a fresh colony on a standard patch of ground, run fast and out of sight with the same rules as the Colony page. Each setting is repeated with different luck. Repeat 1 always uses the same random numbers, so settings are compared fairly.
 - **Results:** a chart with one dot per colony and a line through the averages, a table of every run, and a **spreadsheet** to download (a .csv file with every setting and every measurement).
+- **Watch any run:** every row of the table has a Watch button, and every dot on the chart can be clicked. The run is played again, step for step, with the same settings and the same luck, so it ends on the numbers in the table. You can pause it, change its speed (1× to 64×) and jump to any moment.
 - **What is measured:** crumbs brought home, time to the first crumb, time to collect all the food, ants at the end, the most ants at once, ants that starved, the pantry at the end, and how long the colony survived.
 - **Lab guide:** an AI to think the results through with. It is told to ask before it tells, to point at particular rows and not read the pattern out, and to give a smaller hint, not the answer, when asked to "just tell me". It uses the same AI settings as Aunt Hillary.
 
@@ -91,7 +92,7 @@ python tools/build.py             # -> index.html (this site) and ant-playground
 ## Tests
 
 ```
-node tests/run.mjs        # 20 checks on the built page in headless Chrome; no AI is called
+node tests/run.mjs        # 21 checks on the built page in headless Chrome; no AI is called
 node tests/hillary.mjs    # talks to Aunt Hillary with a real Claude key (costs a little)
 node tests/labguide.mjs   # a pretend student talks to the Science lab's guide (costs a little)
 ```
@@ -101,7 +102,7 @@ Both need Node 22 or newer and Chrome.
 - `tests/run.mjs` steps the colony by hand, so minutes of colony time take a moment. It checks that a fed colony grows, an unfed one starves slowly enough to watch her fade, the rules do what they say, resizing keeps the scent, touch gestures work, and Claude's streamed answers are read correctly.
 - `tests/hillary.mjs` asks her twelve things across the colony's states (fed, hungry, starving, fading, fed again) and writes what she said to `tests/hillary-transcript.md`. - `tests/labguide.mjs` runs one experiment, then has a pretend student say six things, including "Just tell me the answer", and writes the guide's replies to `tests/labguide-transcript.md`.
 - Both real-key scripts read the key from the environment variable `ANT-PLAYGROUND-ANTHROPIC-KEY`. It never enters the browser: the page's request is handed to the script, which adds the key (`tests/relay.mjs`).
-- `tests/shot.mjs` takes a picture of the Science lab, for checking the layout by eye.
+- `tests/shot.mjs` takes a picture of the Science lab, for checking the layout by eye (add `--watch` to open a replay).
 
 ## License
 

@@ -214,7 +214,21 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 #s-table th, #s-table td { padding: 5px 9px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
 #s-table th { position: sticky; top: 0; background: var(--burrow); font-family: var(--mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); white-space: normal; vertical-align: bottom; }
 #s-table td.txt, #s-table th.txt { text-align: left; }
+#s-table td.go, #s-table th.go { text-align: left; padding-right: 2px; }
+#s-table .chip { font-size: 12px; padding: 2px 9px; }
+#s-table tr.watching td { background: var(--chip-bg); }
 .sci-copy { width: 100%; height: 120px; font-family: var(--mono); font-size: 11.5px; }
+/* watching one run again */
+.sci-watch { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--loam); }
+.sci-watch canvas { display: block; width: 100%; max-width: 620px; aspect-ratio: 1; height: auto; border-radius: 10px; justify-self: center; }
+.w-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; font-size: 13.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.w-stats b { color: var(--fg); }
+.w-controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.w-controls .btn { min-width: 62px; }
+.w-controls label { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--muted); }
+.w-controls select { width: auto; }
+.w-controls input[type="range"] { flex: 1 1 160px; width: auto; }
+.w-controls output { font-size: 13.5px; font-variant-numeric: tabular-nums; color: var(--fg); white-space: nowrap; }
 .chip { all: unset; cursor: pointer; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--fg); background: var(--loam); }
 .chip:focus-visible { outline: 2px solid var(--ant); }
 .g-chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -229,7 +243,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 .viz-root .grid { stroke: var(--viz-grid); stroke-width: 1; }
 .viz-root .mean { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .viz-root .dot { stroke: var(--viz-surface); stroke-width: 2; }
-.viz-root .hit { fill: transparent; cursor: default; }
+.viz-root .hit { fill: transparent; cursor: pointer; }
 .viz-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); margin: 4px 0 0; }
 .viz-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; }
 .viz-tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--loam); font-size: 12.5px; padding: 5px 8px; border-radius: 7px; white-space: nowrap; transform: translate(-50%, -130%); z-index: 5; }
@@ -512,7 +526,29 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
       </div>
       <div class="viz-root" id="s-chart"></div>
       <p class="hint" id="s-ceiling" style="display:none">In most of these runs the colony collected all the food there was, so "Crumbs brought home" can't tell them apart. What else could you look at, or change, to see a difference?</p>
-      <p class="hint">Each dot is one colony. The line joins the averages. The table has every run, and the spreadsheet has every setting too.</p>
+      <p class="hint">Each dot is one colony. The line joins the averages. The table has every run, and the spreadsheet has every setting too. To see what a colony did, click its dot, or Watch in its row.</p>
+      <div class="sci-watch" id="s-watch" style="display:none">
+        <div class="g-head">
+          <h3 id="w-title">Run 1</h3>
+          <button class="btn ghost" id="w-close" type="button">Close</button>
+        </div>
+        <p class="hint" id="w-what"></p>
+        <canvas id="w-canvas" role="img" aria-label="The colony in this run, seen from above, with the nest in the middle"></canvas>
+        <p class="w-stats">
+          <span>Ants <b id="w-ants">0</b></span>
+          <span>Carrying <b id="w-carry">0</b></span>
+          <span>Crumbs home <b id="w-home">0</b></span>
+          <span>Pantry <b id="w-pantry">0</b>%</span>
+          <span>Starved <b id="w-starved">0</b></span>
+        </p>
+        <div class="w-controls">
+          <button class="btn" id="w-play" type="button">Pause</button>
+          <label>Speed <select id="w-speed"><option value="1">1×</option><option value="4" selected>4×</option><option value="16">16×</option><option value="64">64×</option></select></label>
+          <input id="w-time" type="range" min="0" max="300" step="1" value="0" aria-label="Where you are in the run, in seconds">
+          <output id="w-clock">0:00 of 5:00</output>
+        </div>
+        <p class="hint" id="w-end" role="status"></p>
+      </div>
       <div class="sci-table-wrap" tabindex="0" aria-label="Table of every run"><table id="s-table"></table></div>
       <div id="s-save" style="display:none">
         <p class="hint" id="s-save-note"></p>
@@ -798,8 +834,8 @@ function resize() {
   trailImg = tctx.createImageData(gw, gh);
 }
 
-function drawNestOnGround() {
-  const g = ground.getContext("2d"), { x, y } = nestXY(), Rn = rng(groundSeed * 31 + 5);
+function drawNestOnGround(gr = ground) {
+  const g = gr.getContext("2d"), { x, y } = nestXY(), Rn = rng(groundSeed * 31 + 5);
   for (let i = 0; i < 900; i++) {
     const a = Rn() * Math.PI * 2, d = 14 + Math.pow(Rn(), 0.7) * 42;
     const px = x + Math.cos(a) * d, py = y + Math.sin(a) * d * 0.8;
@@ -1058,7 +1094,7 @@ function step(dt) {
     if (a.flee > 0) {
       a.flee -= dt;
       target = angTo(a.fx, a.fy, a.x, a.y) + Math.sin(a.walked * 0.08) * 35; urgency = 1.8;   // zigzag away
-    } else if (tool === "lead" && pointer.down && Math.hypot(pointer.x - a.x, pointer.y - a.y) < 280) {
+    } else if (tool === "lead" && pointer.down && !labBusy && Math.hypot(pointer.x - a.x, pointer.y - a.y) < 280) {
       if (Math.hypot(pointer.x - a.x, pointer.y - a.y) > 16) target = angTo(a.x, a.y, pointer.x, pointer.y);
       urgency = 1.4;
     } else if (a.carrying) {
@@ -1128,20 +1164,20 @@ function drawCrumb(g, c) {
   g.restore();
 }
 
-function render() {
-  const g = wctx;
-  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+// The colony as it is now: ground, scent, food, the dead, the ants, spiders. Returns how many ants are carrying.
+// The Science lab draws its replays with this too, on its own ground and scent picture.
+function drawColony(g, gr, tc, tx, ti, trails) {
   g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
-  g.drawImage(ground, 0, 0, W, H);
+  g.drawImage(gr, 0, 0, W, H);
 
-  if (showTrails) {
-    const d = trailImg.data;
+  if (trails) {
+    const d = ti.data;
     for (let i = 0; i < trail.length; i++) {
       const v = Math.min(1, trail[i] / 1.6);
       d[i * 4] = 255; d[i * 4 + 1] = 196; d[i * 4 + 2] = 92; d[i * 4 + 3] = v * 120;
     }
-    tctx.putImageData(trailImg, 0, 0);
-    g.drawImage(trailCanvas, 0, 0, gw * GRID, gh * GRID);
+    tx.putImageData(ti, 0, 0);
+    g.drawImage(tc, 0, 0, gw * GRID, gh * GRID);
   }
   for (const c of crumbs) drawCrumb(g, c);
 
@@ -1167,6 +1203,14 @@ function render() {
     drawSpiderShadow(g, sp.x + off, sp.y + off, sp.dir, spiderScale());
     drawSpider(g, spiderImg, sp.x, sp.y, sp.dir, Math.floor(sp.walked / (SPIDER_STRIDE * ST * spiderScale())) % 8, ss, 1 - 0.4 * sp.drop);
   }
+  return carrying;
+}
+
+function render() {
+  const g = wctx;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const carrying = drawColony(g, ground, trailCanvas, tctx, trailImg, showTrails);
+  const s = antScale();
   if (tool === "spider" && snout.over && !pointer.down && !spiders.length) {   // where the spider will land
     drawSpider(g, spiderImg, pointer.x, pointer.y, 90, 0, spiderScale(), 0.4);
   }
@@ -2453,6 +2497,7 @@ function labValues(p, text, most) {
 // the whole experiment: every value of A (with every value of B), each repeated. Repeat number n always
 // starts from the same random numbers, so two settings are compared on the same luck.
 async function labRun(plan, onProgress) {
+  if (watch) watchClose();                 // a replay has the colony's variables; give them back first
   const rows = [], saved = labSnapshot();
   labBusy = true; labStop = false;
   try {
@@ -2553,9 +2598,15 @@ function labShow() {
   const cols = [["run", "Run"], [a.id, a.short], ...(b ? [[b.id, b.short]] : []), ["repeat", "Repeat"], ...LAB_MEASURES.map(m => [m.id, m.name]), ["survived", "Survived"]];
   const t = $("s-table"); t.textContent = "";
   const head = t.createTHead().insertRow();
+  const see = document.createElement("th"); see.scope = "col"; see.className = "go"; see.textContent = "See it"; head.appendChild(see);
   for (const [, name] of cols) { const th = document.createElement("th"); th.scope = "col"; th.textContent = name; head.appendChild(th); }
   const body = t.createTBody();
-  for (const r of rows) { const tr = body.insertRow(); for (const [id] of cols) { const td = tr.insertCell(); td.textContent = r[id]; if (typeof r[id] === "string" && r[id] !== "") td.className = "txt"; } }
+  for (const r of rows) {
+    const tr = body.insertRow();
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = "Watch"; b.setAttribute("aria-label", "Watch run " + r.run); b.onclick = () => watchOpen(r);
+    const go = tr.insertCell(); go.className = "go"; go.appendChild(b);
+    for (const [id] of cols) { const td = tr.insertCell(); td.textContent = r[id]; if (typeof r[id] === "string" && r[id] !== "") td.className = "txt"; }
+  }
   labChart();
 }
 // Chart: one dot per colony and a line through the averages, against the thing that was changed.
@@ -2597,9 +2648,10 @@ function labChart() {
       const cx = xPos(r[a.id]) + dodge(si), cy = yPos(r[mid]);
       svg.appendChild(E("circle", { class: "dot", cx, cy, r: 5, fill: color }));
       const hit = E("circle", { class: "hit", cx, cy, r: 12 });
-      const say = `${a.short} ${r[a.id]}` + (b ? `, ${b.short} ${r[b.id]}` : "") + `, repeat ${r.repeat}: ${labFmt(r[mid])}`;
+      const say = `Run ${r.run}: ${a.short} ${r[a.id]}` + (b ? `, ${b.short} ${r[b.id]}` : "") + `, repeat ${r.repeat}: ${labFmt(r[mid])}`;
       hit.addEventListener("pointerenter", () => { tip.textContent = say; tip.style.display = ""; tip.style.left = (cx / Wd * 100) + "%"; tip.style.top = (cy / Hd * 100) + "%"; });
       hit.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+      hit.addEventListener("click", () => watchOpen(r));
       svg.appendChild(hit);
     }
     if (b && means.length) { const end = means.at(-1); ends.push({ x: xPos(end[0]) + dodge(series.length - 1) + 10, y: yPos(end[1]) + 4, text: String(bv) }); }
@@ -2641,6 +2693,85 @@ async function labDownload() {
   $("s-save-note").textContent = (saved ? "Saved as " + name + ". " : declined ? "" : "The file couldn't be saved here. ") + "You can also copy the table below and paste it into a spreadsheet.";
   $("s-copy").value = labTable("\t");
 }
+
+// ---- watching one run again ----
+// A run is decided entirely by its settings and its seed, so stepping it again from the start, with the same
+// steps, shows exactly what happened in it and ends on the same numbers. Like an experiment, a replay borrows
+// the colony's variables (labBusy), and gives them back when it is closed.
+let watch = null;        // { row, c, seed, total, done, want, playing, seeking, ended, speed, saved }: done, want and total count steps
+let watchGround = null, watchScent = null;
+const wcan = $("w-canvas"), wg = wcan.getContext("2d");
+const clock = s => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0");
+function watchOpen(row) {
+  if (labBusy && !watch) return;           // an experiment is running
+  if (watch) watchClose();
+  const c = Object.fromEntries(LAB_PARAMS.map(p => [p.id, row[p.id]]));
+  watch = { row, c, seed: 7919 * row.repeat + 13, total: lab.seconds * 30, done: 0, want: 0, playing: !reduceMotion, seeking: false, ended: false, speed: +$("w-speed").value, saved: labSnapshot() };
+  labBusy = true;
+  labSetup(c, watch.seed);
+  if (!watchGround) {                      // the standard patch of ground, made once
+    watchGround = makeGround(LAB_W, LAB_H, 7, false); drawNestOnGround(watchGround);
+    const tc = document.createElement("canvas"); tc.width = gw; tc.height = gh;
+    const tx = tc.getContext("2d"); watchScent = { tc, tx, ti: tx.createImageData(gw, gh) };
+  }
+  const { a, b } = lab;
+  $("w-title").textContent = "Run " + row.run;
+  $("w-what").textContent = `${a.short}: ${row[a.id]}` + (b ? `, ${b.short.toLowerCase()}: ${row[b.id]}` : "") + `, repeat ${row.repeat}. ` +
+    "This is that run played again, step for step, with the same settings and the same luck, so it ends on the numbers in the table. The nest is in the middle and the yellow glow is scent.";
+  $("w-time").max = lab.seconds; $("w-end").textContent = "";
+  $("s-watch").style.display = "";
+  for (const tr of $("s-table").tBodies[0].rows) tr.classList.toggle("watching", tr.rowIndex === row.run);
+  watchDraw();
+  $("s-watch").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+  $("w-play").focus({ preventScroll: true });
+}
+function watchClose() {
+  if (!watch) return;
+  labRestore(watch.saved); labBusy = false; watch = null;
+  $("s-watch").style.display = "none";
+  for (const tr of $("s-table").tBodies[0]?.rows || []) tr.classList.remove("watching");
+}
+// the run stopped where the experiment's did: at its last second, or at the end of the second the colony died in
+const watchOver = w => w.done >= w.total || (colonyDead && w.done % 30 === 0);
+function watchFrame(dt) {
+  const w = watch;
+  if (w.playing && !w.seeking && !w.ended) w.want = Math.min(w.total, w.want + dt * 30 * w.speed);
+  if (w.want < w.done) { labSetup(w.c, w.seed); w.done = 0; w.ended = false; }      // going back means starting again and catching up
+  const t0 = performance.now(), goal = Math.floor(w.want);
+  while (w.done < goal && !watchOver(w)) {
+    step(LAB_DT); w.done++;
+    if (w.done % 16 === 0 && performance.now() - t0 > 14) break;     // leave time to draw; a long jump takes a few frames
+  }
+  if (watchOver(w)) { w.ended = true; w.seeking = false; w.want = w.done; }
+  else if (w.done >= goal) w.seeking = false;
+  else if (!w.seeking) w.want = w.done;      // a slow computer plays as fast as it can, without falling behind
+  watchDraw();
+}
+function watchDraw() {
+  const w = watch, size = Math.round(wcan.getBoundingClientRect().width);
+  if (size) {
+    const px = Math.round(size * Math.min(2, window.devicePixelRatio || 1));
+    if (wcan.width !== px) wcan.width = wcan.height = px;
+    wg.setTransform(px / LAB_W, 0, 0, px / LAB_H, 0, 0);
+    $("w-carry").textContent = drawColony(wg, watchGround, watchScent.tc, watchScent.tx, watchScent.ti, true);
+  }
+  $("w-ants").textContent = ants.length; $("w-home").textContent = delivered;
+  $("w-pantry").textContent = Math.round(pantry); $("w-starved").textContent = tally.starved;
+  const secs = w.done / 30;
+  if (!w.seeking) $("w-time").value = Math.floor(secs);
+  $("w-clock").textContent = w.seeking ? "Jumping to " + clock(w.want / 30) + "…" : `${clock(secs)} of ${clock(w.total / 30)}`;
+  $("w-play").textContent = w.ended ? "Again" : w.playing ? "Pause" : "Play";
+  $("w-end").textContent = !w.ended ? "" : colonyDead ? `The colony died ${clock(secs)} into the run. These are the numbers in row ${w.row.run} of the table.`
+    : `That is the end of the run. These are the numbers in row ${w.row.run} of the table.`;
+}
+$("w-play").onclick = () => {
+  const w = watch; if (!w) return;
+  if (w.ended) { w.want = 0; w.ended = false; w.playing = true; labSetup(w.c, w.seed); w.done = 0; }
+  else w.playing = !w.playing;
+};
+$("w-speed").onchange = () => { if (watch) watch.speed = +$("w-speed").value; };
+$("w-time").addEventListener("input", () => { const w = watch; if (!w) return; w.want = Math.min(w.total, +$("w-time").value * 30); w.seeking = true; w.ended = false; });
+$("w-close").onclick = () => { const run = watch?.row.run; watchClose(); $("s-table").tBodies[0]?.rows[run - 1]?.querySelector("button")?.focus({ preventScroll: true }); };
 
 // ---- the lab guide: an AI that helps the student think, and doesn't do the thinking for them ----
 const LAB_GUIDE = `You are the lab guide in the Science lab of Ant Playground, a web page with a simulated ant colony. A student, probably 10 to 16 years old, has just run an experiment and wants help making sense of the results.
@@ -2730,7 +2861,8 @@ labFill();
 // ---------- routing ----------
 function route() {
   const v = location.hash === "#lab" ? "lab" : location.hash === "#science" ? "science" : "colony";
-  if (v !== "science" && labBusy) labStop = true;       // leaving the Science lab stops an experiment
+  if (v !== "science" && watch) watchClose();           // leaving the Science lab ends a replay
+  if (v !== "science" && labBusy) labStop = true;       // and stops an experiment
   for (const name of ["colony", "science", "lab"]) {
     $("view-" + name).hidden = v !== name;
     $("tab-" + name).setAttribute("aria-current", v === name ? "page" : "false");
@@ -2770,6 +2902,7 @@ function frame(now) {
     fpsAcc += dt; fpsN++;
     if (fpsAcc > 0.5) { $("hud-fps").textContent = Math.round(fpsN / fpsAcc) + " fps"; fpsAcc = 0; fpsN = 0; }
   }
+  if (watch) watchFrame(dt);
   if (!$("view-lab").hidden) renderLab(dt);
   requestAnimationFrame(frame);
 }

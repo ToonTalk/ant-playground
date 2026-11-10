@@ -284,6 +284,49 @@ await test("Science lab: the guide is given the results and told to ask, not tel
   assert(s.reply && s.sys && s.table && s.guess && s.said && s.log === 2, JSON.stringify(s));
 });
 
+await test("Science lab: watching a run replays it exactly, can jump back, and gives the live colony back", async () => {
+  const s = await run(`location.hash = "#science"; await new Promise(r => setTimeout(r, 100));
+    const live = () => JSON.stringify({ ants: ants.length, pantry, W, H, simTime, crumbs: crumbs.length, delivered, scent: trail.reduce((a, b) => a + b, 0), rules, born: tally.born });
+    const before = live();
+    // one colony that lives and one that starves: 20 ants, one small pile, normal appetite and four times it
+    const fixed = { ...Object.fromEntries(LAB_PARAMS.map(p => [p.id, p.def])), ants: 20, piles: 1, pile: 5 };
+    const plan = { a: labParam("appetite"), b: null, aValues: [0.2, 4], bValues: null, fixed, seconds: 300, reps: 1, guess: "" };
+    lab = { ...plan, rows: await labRun(plan), stopped: false }; labShow();
+    const buttons = [...$("s-table").tBodies[0].rows].map(tr => tr.cells[0].querySelector("button")?.textContent);
+    const end = () => ({ home: delivered, antsEnd: ants.length, starved: tally.starved, pantryEnd: Math.round(pantry), lasted: watch.done / 30, survived: colonyDead ? "no" : "yes" });
+    const pick = r => ({ home: r.home, antsEnd: r.antsEnd, starved: r.starved, pantryEnd: r.pantryEnd, lasted: r.lasted, survived: r.survived });
+    const out = [];
+    for (const row of lab.rows) {
+      $("s-table").tBodies[0].rows[row.run - 1].cells[0].querySelector("button").click();
+      const shown = $("s-watch").style.display !== "none" && labBusy && $("w-title").textContent === "Run " + row.run, marked = document.querySelectorAll("#s-table tr.watching").length;
+      watch.playing = true; watch.speed = 64;
+      for (let i = 0; i < 400; i++) watchFrame(0.05);                       // 64x: about a minute of the run every third of a second
+      const mid = watch.done;
+      $("w-time").value = 300; $("w-time").dispatchEvent(new Event("input", { bubbles: true }));   // jump to the end
+      for (let i = 0; i < 4000 && !watch.ended; i++) watchFrame(0.016);
+      const got = end(), words = $("w-end").textContent, label = $("w-play").textContent, drawn = $("w-canvas").width > 0 && $("w-ants").textContent === String(ants.length);
+      $("w-time").value = 10; $("w-time").dispatchEvent(new Event("input", { bubbles: true }));    // and back to ten seconds in
+      for (let i = 0; i < 200 && watch.seeking; i++) watchFrame(0);
+      out.push({ shown, marked, mid, got, want: pick(row), words, label, drawn, back: watch.done, backTime: Math.round(simTime) });
+    }
+    // a dot on the chart opens the same thing; leaving the Science lab closes it
+    document.querySelector("#s-chart .hit").dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const viaDot = !!watch && watch.row.run === 1;
+    location.hash = "#colony"; await new Promise(r => setTimeout(r, 100));
+    return { buttons, out, viaDot, closed: !watch && !labBusy && $("s-watch").style.display === "none", restored: before === live() };`);
+  assert(s.buttons.join() === "Watch,Watch", "each row should have a Watch button: " + s.buttons.join());
+  for (const o of s.out) {
+    assert(o.shown && o.marked === 1 && o.drawn, JSON.stringify({ shown: o.shown, marked: o.marked, drawn: o.drawn }));
+    assert(o.mid > 0, "playing should move the run on");
+    assert(JSON.stringify(o.got) === JSON.stringify(o.want), `the replay should end on the row's numbers: ${JSON.stringify(o.got)} vs ${JSON.stringify(o.want)}`);
+    assert(o.label === "Again" && /numbers in row/.test(o.words), o.label + " / " + o.words);
+    assert(o.back === 300 && o.backTime === 10, `jumping back to 0:10 gave step ${o.back}, time ${o.backTime}`);
+  }
+  assert(s.out[0].want.survived === "yes" && s.out[1].want.survived === "no" && /died/.test(s.out[1].words), "one colony should live and one starve: " + JSON.stringify(s.out.map(o => o.want)));
+  assert(s.viaDot && s.closed && s.restored, JSON.stringify({ viaDot: s.viaDot, closed: s.closed, restored: s.restored }));
+  return `the starved colony died ${s.out[1].want.lasted}s in, in both the run and the replay`;
+});
+
 await page.close();
 if (page.errors.length) console.log("\npage errors:\n  " + [...new Set(page.errors)].join("\n  "));
 const failed = results.filter(r => !r.ok).length;
