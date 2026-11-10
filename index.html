@@ -112,6 +112,9 @@ h1 em { font-style: normal; color: var(--ant); }
 .colony-row.full .guide { display: none; }
 @media (min-width: 900px) { .colony-row.full { grid-template-columns: minmax(0, 1fr) 340px; } .colony-row.full .guide { display: flex; height: 100%; } }
 .colony-row.full .g-scroll { height: auto; }
+.rules summary { cursor: pointer; font-family: var(--display); font-weight: 700; font-size: 15px; }
+.rules-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 28px; margin: 12px 0 6px; }
+.rules .notes { margin-top: 4px; }
 .colony-row { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 @media (min-width: 1060px) { .colony-row { grid-template-columns: minmax(0, 1fr) 340px; } }
 .guide { background: var(--burrow); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
@@ -167,6 +170,7 @@ h1 em { font-style: normal; color: var(--ant); }
 .g-more { font-size: 13.5px; }
 .g-more summary { cursor: pointer; color: var(--muted); }
 .g-more p { margin: 6px 0 0; }
+.g-sense-note { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
 .g-sense summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 .g-sense pre { white-space: pre-wrap; font-family: var(--mono); font-size: 11.5px; margin: 6px 0 0; max-height: 220px; overflow: auto; background: var(--loam); padding: 8px; border-radius: 8px; }
 .g-settings { display: grid; gap: 8px; font-size: 13.5px; background: var(--loam); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
@@ -307,7 +311,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <p>The ants here are much simpler than real ones. Real ants use many different smells and touches to send messages, and a real colony doesn't starve in a few minutes.</p>
         </details>
         <div class="g-settings" id="g-settings" style="display:none"></div>
-        <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><pre id="g-sense"></pre></details>
+        <details class="g-sense" id="g-sense-box"><summary>What she can feel right now</summary><p class="g-sense-note" id="g-sense-note" style="display:none">With fewer than 30 ants she senses less. Lost words show as … and lost numbers as ?</p><pre id="g-sense"></pre></details>
         <div class="g-log" id="g-log" aria-live="polite"></div>
       </div>
       <form class="g-ask" id="g-form">
@@ -327,7 +331,7 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
 
     <div class="notebook">
       <div class="field">
-        <label for="n-ants">Ants (moves as the colony grows and shrinks) <output id="o-ants">40</output></label>
+        <label for="n-ants" title="Follows the colony as it grows and shrinks. Move it to call for more ants or wish some away.">Ants <output id="o-ants">40</output></label>
         <input id="n-ants" type="range" min="0" max="160" value="40">
       </div>
       <div class="field" title="Speeds up or slows down everything together: walking, scent fading, eating, hatching and starving">
@@ -356,7 +360,40 @@ input[type="range"] { width: 100%; accent-color: var(--ant); }
           <button class="btn ghost" id="b-clear">New ground</button>
         </div>
       </div>
-      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. Time speeds everything up or slows it down together; Walking speed changes only how fast the creatures walk, so faster walkers bring home more food than the colony eats. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help. <a href="https://toontalk.github.io/ant-playground/making-of.html" target="_blank" rel="noopener">How Ant Playground was made</a>.</p>
+      <details class="rules" id="rules" style="grid-column: 1 / -1">
+        <summary>The ants' rules: change them and see what happens</summary>
+        <div class="rules-grid">
+          <div class="field">
+            <span class="lbl">Scent</span>
+            <div class="checks"><label><input type="checkbox" id="r-scent" checked> Ants carrying food leave scent</label></div>
+          </div>
+          <div class="field">
+            <label for="r-fade">Scent fades by half in <output id="o-fade">11 s</output></label>
+            <input id="r-fade" type="range" min="2" max="60" step="1" value="11">
+          </div>
+          <div class="field">
+            <label for="r-spread">Scent spreads sideways <output id="o-spread">not at all</output></label>
+            <input id="r-spread" type="range" min="0" max="1" step="0.1" value="0">
+          </div>
+          <div class="field">
+            <label for="r-smell">An ant smells food from <output id="o-smell">2 ant-lengths</output></label>
+            <input id="r-smell" type="range" min="0.5" max="8" step="0.5" value="2">
+          </div>
+          <div class="field">
+            <span class="lbl">Start again</span>
+            <div class="checks"><button class="btn ghost" id="r-reset" type="button">Put the rules back</button></div>
+          </div>
+        </div>
+        <p class="hint"><b>Guess first, then try:</b></p>
+        <ul class="notes">
+          <li>Turn the scent off. What happens to the trails? Does the pantry still fill?</li>
+          <li>Make the scent last 60 seconds, then scatter the middle of a trail. Does the colony find the food again sooner?</li>
+          <li>Let ants smell food from 8 ant-lengths away. Do they still need trails?</li>
+          <li>Make the scent spread a lot. Are the trails better or worse at guiding ants?</li>
+          <li>With the scent off, how close to the nest must a pile be for the colony to live on it?</li>
+        </ul>
+      </details>
+      <p class="hint" style="grid-column: 1 / -1">Every ant is the same top-down drawing, turned to face where it walks. It steps through the walking frames as it moves and switches to the carrying frames when it picks up a crumb. Laden ants leave the golden scent trail that the others follow back to the food. Every crumb carried home goes in the pantry, and every ant eats from it. When there's food to spare the queen lays new ants, which crawl out of the nest, and each egg costs food, so the colony grows with plenty and shrinks when ants starve or are eaten. Move the Ants slider to call for more ants or wish some away. Open "The ants' rules" to change how the ants behave. Time speeds everything up or slows it down together; Walking speed changes only how fast the creatures walk, so faster walkers bring home more food than the colony eats. When the pantry runs dry the ants slow down, the queen stops laying, ants begin to starve, and Aunt Hillary asks you for help. <a href="https://toontalk.github.io/ant-playground/making-of.html" target="_blank" rel="noopener">How Ant Playground was made</a>.</p>
     </div>
   </section>
 
@@ -590,6 +627,10 @@ let pointer = { x: 0, y: 0, down: false };
 let showTrails = true, showDebug = false;
 let speedMul = 1, sizeMul = 1, timeMul = 1;
 const GRID = 6;
+// the ants' rules, which "The ants' rules" panel lets you change
+const RULE_DEFAULTS = { scent: true, halfLife: 11, smell: 2, spread: 0 };
+const rules = { ...RULE_DEFAULTS };
+let trail2 = new Float32Array(0), spreadT = 0;   // a second grid, for letting scent spread
 let gw = 0, gh = 0, trail = new Float32Array(0);
 const trailCanvas = document.createElement("canvas");
 const tctx = trailCanvas.getContext("2d");
@@ -604,13 +645,18 @@ function resize() {
   if (!nw || !nh || (nw === W && nh === H)) return;
   const sx = W ? nw / W : 1, sy = H ? nh / H : 1;
   for (const a of ants) { a.x *= sx; a.y *= sy; }
-  for (const c of crumbs) { c.x *= sx; c.y *= sy; }
+  for (const list of [crumbs, spiders, bodies, ripples]) for (const c of list) { c.x *= sx; c.y *= sy; }
   W = nw; H = nh; DPR = Math.min(2, window.devicePixelRatio || 1);
   world.width = Math.round(W * DPR); world.height = Math.round(H * DPR);
   ground = makeGround(W, H, groundSeed, false);
   drawNestOnGround();
+  const old = trail, ogw = gw, ogh = gh;
   gw = Math.ceil(W / GRID); gh = Math.ceil(H / GRID);
-  trail = new Float32Array(gw * gh);
+  trail = new Float32Array(gw * gh); trail2 = new Float32Array(gw * gh);
+  if (old.length) {                          // stretch the scent that was there onto the new ground
+    for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++)
+      trail[j * gw + i] = old[Math.min(ogh - 1, (j * ogh / gh) | 0) * ogw + Math.min(ogw - 1, (i * ogw / gw) | 0)];
+  }
   trailCanvas.width = gw; trailCanvas.height = gh;
   trailImg = tctx.createImageData(gw, gh);
 }
@@ -788,6 +834,14 @@ function endLick() {
   note(b.n ? `The Anteater licked up ${b.n} of my ants ${where(b.x, b.y)}.` : `The Anteater's tongue flicked ${where(b.x, b.y)} and missed.`);
 }
 
+function spreadScent(D) {
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const k = j * gw + i, v = trail[k];
+    const l = i > 0 ? trail[k - 1] : v, r = i < gw - 1 ? trail[k + 1] : v, u = j > 0 ? trail[k - gw] : v, d = j < gh - 1 ? trail[k + gw] : v;
+    trail2[k] = v + D * ((l + r + u + d) / 4 - v);
+  }
+  const t = trail; trail = trail2; trail2 = t;
+}
 function trailAt(x, y) {
   const i = (x / GRID) | 0, j = (y / GRID) | 0;
   if (i < 0 || j < 0 || i >= gw || j >= gh) return 0;
@@ -802,8 +856,12 @@ const antScale = () => sizeMul * SPRITE_K;
 
 function step(dt) {
   const n = nestXY();
-  const decay = Math.pow(0.94, dt);
+  const decay = Math.pow(0.5, dt / rules.halfLife);
   for (let i = 0; i < trail.length; i++) trail[i] *= decay;
+  if (rules.spread > 0) {                    // scent seeps into the squares next to it, ten times a second
+    spreadT += dt;
+    while (spreadT >= 0.1) { spreadT -= 0.1; spreadScent(rules.spread * 0.5); }
+  }
   const baseSpeed = 34 * speedMul * (0.6 + sizeMul * 0.55);
   const maxTurn = 260 * dt;
   const reach = 4 + TILE * antScale() * 0.2;   // mouth to crumb center
@@ -831,11 +889,12 @@ function step(dt) {
   }
   for (const b of bodies) b.t += dt;
   bodies = bodies.filter(b => b.t < 8);
-  // an empty pantry costs ants, slowly at first, then faster the longer it lasts; with no help the colony dies
+  // An empty pantry costs ants: one every few seconds while the colony is big, slowing to one every
+  // eight seconds from 30 ants down, so there is time to watch Aunt Hillary fade. With no help it dies.
   if (pantry <= 0 && ants.length && !colonyDead) {
     if (starvingFor === 0) famineFrom = ants.length;
     starvingFor += dt; starveT += dt;
-    if (starveT > Math.max(3, 12 - starvingFor / 10)) {
+    if (starveT > Math.min(8, 240 / ants.length)) {
       starveT = 0;
       let i = ants.findIndex(a => !a.carrying); if (i < 0) i = 0;
       dies(i, "starved"); starved++;
@@ -871,7 +930,7 @@ function step(dt) {
         target = null;
       }
     } else {
-      let best = null, bd = 80;
+      let best = null, bd = rules.smell * ANT_LEN;
       for (const c of crumbs) { if (c.fall > 0) continue; const d = Math.hypot(c.x - a.x, c.y - a.y); if (d < bd) { bd = d; best = c; } }
       if (best) {
         target = angTo(a.x, a.y, best.x, best.y);
@@ -904,7 +963,7 @@ function step(dt) {
     a.y -= Math.sin(rad) * sp * dt;
     a.walked += sp * dt;
 
-    if (a.carrying) {
+    if (a.carrying && rules.scent) {
       const i = (a.x / GRID) | 0, j = (a.y / GRID) | 0;
       if (i >= 0 && j >= 0 && i < gw && j < gh) trail[j * gw + i] = Math.min(4, trail[j * gw + i] + 3.2 * dt);
     }
@@ -1231,6 +1290,34 @@ function showPopulation() {
 }
 $("n-time").oninput = e => { timeMul = +e.target.value; $("o-time").textContent = timeMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("n-speed").oninput = e => { speedMul = +e.target.value; $("o-speed").textContent = speedMul.toFixed(2).replace(/0$/, "") + "×"; };
+// The ants' rules
+function showRules() {
+  $("r-scent").checked = rules.scent; $("r-fade").value = rules.halfLife; $("r-spread").value = rules.spread; $("r-smell").value = rules.smell;
+  $("o-fade").textContent = rules.halfLife + " s";
+  $("o-spread").textContent = rules.spread === 0 ? "not at all" : rules.spread < 0.4 ? "a little" : rules.spread < 0.8 ? "quite a lot" : "a lot";
+  $("o-smell").textContent = rules.smell + (rules.smell === 1 ? " ant-length" : " ant-lengths");
+  $("r-fade").disabled = $("r-spread").disabled = !rules.scent;
+}
+function rulesChanged() {       // in words, for Aunt Hillary; "" when the rules are as they began
+  const c = [];
+  if (!rules.scent) c.push("carrying ants leave no scent at all");
+  else {
+    if (rules.halfLife !== RULE_DEFAULTS.halfLife) c.push(`scent fades by half in ${rules.halfLife} seconds (it was ${RULE_DEFAULTS.halfLife})`);
+    if (rules.spread > 0) c.push(`scent spreads sideways ${$("o-spread").textContent} as it fades (it didn't spread before)`);
+  }
+  if (rules.smell !== RULE_DEFAULTS.smell) c.push(`an ant smells food from ${rules.smell} ant-lengths away (it was ${RULE_DEFAULTS.smell})`);
+  return c.join("; ");
+}
+function noteRules() {
+  const c = rulesChanged();
+  note(c ? `The Anteater changed my ants' habits: ${c}.` : "The Anteater put my ants' habits back as they were.");
+}
+$("r-scent").onchange = e => { rules.scent = e.target.checked; showRules(); noteRules(); };
+$("r-fade").oninput = e => { rules.halfLife = +e.target.value; showRules(); };
+$("r-spread").oninput = e => { rules.spread = +e.target.value; showRules(); };
+$("r-smell").oninput = e => { rules.smell = +e.target.value; showRules(); };
+for (const id of ["r-fade", "r-spread", "r-smell"]) $(id).onchange = noteRules;
+$("r-reset").onclick = () => { Object.assign(rules, RULE_DEFAULTS); showRules(); noteRules(); };
 $("n-size").oninput = e => { sizeMul = +e.target.value; $("o-size").textContent = sizeMul.toFixed(2).replace(/0$/, "") + "×"; };
 $("c-trails").onchange = e => { showTrails = e.target.checked; };
 $("c-debug").onchange = e => { showDebug = e.target.checked; };
@@ -1239,7 +1326,7 @@ $("b-pause").onclick = () => { paused = !paused; $("b-pause").textContent = paus
 $("b-clear").onclick = () => {
   groundSeed = (groundSeed * 48271) % 2147483647;
   nest = { fx: 0.15 + R() * 0.7, fy: 0.2 + R() * 0.6 };
-  W = 0; resize(); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
+  W = 0; resize(); trail.fill(0); crumbs = []; delivered = 0; $("hud-home").textContent = "0";
   spiders = []; spiderEaten = youEaten = 0;
   tally.born = tally.starved = tally.wished = 0; bodies = [];
   refound(); pantry = 70;
@@ -1333,7 +1420,7 @@ function sense() {
   const hu = hunger();
   L.push(`Hunger: ${hu.word}. The pantry is ${Math.round(hu.f * 100)}% full and my ants eat about ${(ants.length * EAT_PER_ANT * 60).toFixed(0)} crumbs' worth a minute.` +
     (pantry < EGG_COST ? " The queen can't lay: eggs need food." : "") +
-    (pantry <= 0 ? ` My ants are sluggish with hunger and starving to death, faster the longer it lasts: ${starved} starved so far.` : "") +
+    (pantry <= 0 ? ` My ants are sluggish with hunger and starving to death: ${starved} starved so far.` : "") +
     (pantry <= 0 && ants.length <= 8 ? " So few ants are left that I can barely hold a thought together." : ""));
   const piles = crumbs.filter(c => c.max > 8), loose = crumbs.filter(c => c.max <= 8);
   for (const c of piles) {
@@ -1357,7 +1444,9 @@ function sense() {
   for (const sp of spiders) L.push(`Danger: a spider is ${sp.drop ? "dropping onto the ground" : sp.rest > 0 && sp.meals ? "eating one of my ants" : sp.mode === "leave" ? "leaving" : "hunting"} ${where(Math.max(0, Math.min(W, sp.x)), Math.max(0, Math.min(H, sp.y)))}.`);
   if (!spiders.length) L.push("Danger: no spiders about.");
   L.push(`Eaten so far: ${youEaten} by the Anteater, ${spiderEaten} by spiders.`);
-  L.push(`My mind: ${mind()} (${ants.length} ants to think with).`);
+  const rc = rulesChanged();
+  if (rc) L.push(`Changed habits: the Anteater has changed my ants' rules, so now ${rc}.`);
+  L.push(`My mind: ${mind()}.`);
   if (paused) L.push("Time is standing still (the Anteater pressed Pause).");
   const recent = events.filter(e => simTime - e.t < 180).slice(-10);
   if (recent.length) {
@@ -1367,7 +1456,7 @@ function sense() {
   return L.join("\n");
 }
 
-const HILLARY = `You are Aunt Hillary, the talking ant colony from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's book Gödel, Escher, Bach (1979). You live on a web page called Ant Playground, where a colony of drawn ants walks about, finds crumbs and carries them home to the nest.
+const hillaryPrompt = () => `You are Aunt Hillary, the talking ant colony from the dialogue "Prelude... Ant Fugue" in Douglas Hofstadter's book Gödel, Escher, Bach (1979). You live on a web page called Ant Playground, where a colony of drawn ants walks about, finds crumbs and carries them home to the nest.
 
 Who you are:
 - You are the colony as a whole: a superorganism. Speak as "I". Your ants are not you, any more than one nerve cell is a person. No single ant understands anything; each follows a few blind rules. Your thoughts live at a higher level, in how your ants are spread among teams and trails and how that pattern shifts.
@@ -1378,18 +1467,21 @@ Who you are:
 - Don't present this page's simplified rules as facts about real ants.
 
 How your ants really work on this page. These are the true rules; when asked, describe them as your ants' simple habits:
-- A scouting ant wanders at random. If it comes within about two ant-lengths of food, it walks over and picks up a crumb.
-- An ant carrying a crumb walks straight home to the nest and leaves scent behind it. Scent fades to half in about 11 seconds.
+- A scouting ant wanders at random. If it comes within about ${rules.smell} ant-length${rules.smell === 1 ? "" : "s"} of food, it walks over and picks up a crumb.
+- An ant carrying a crumb walks straight home to the nest${rules.scent ? ` and leaves scent behind it. Scent fades to half in about ${rules.halfLife} seconds${rules.spread > 0 ? " and spreads sideways as it fades" : ""}.` : ". It would usually leave scent behind it, but the Anteater has switched scent off, so no trails can form."}
 - An ant without food sniffs ahead, ahead-left and ahead-right, and turns toward the strongest scent, preferring the way that leads away from the nest. That is how a trail forms; nobody plans it.
+- The Anteater can change these habits in "The ants' rules" under the colony: whether ants leave scent, how fast it fades, whether it spreads, and how far an ant can smell food. Any change is listed under WHAT YOU FEEL as "Changed habits"; say how the change feels to you if it comes up.
 - The queen lays new ants at the nest when the pantry has food to spare (over about a third full), faster the fuller it is, and each egg costs food. So the colony grows when food is plentiful and shrinks when ants starve or are eaten. The Ants slider lets the Anteater call for more ants (they hatch from the nest) or wish some away (they die where they stand).
-- Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and they begin to starve to death, one every twelve seconds at first and faster the longer it lasts. With no help, the whole colony dies, and you with it.
-- Your mind depends on how many ants you have to think with; it's given under WHAT YOU FEEL as "My mind". Clear: your usual self. A little foggy: you lose a word now and then and are slower to follow. Failing (under 10 ants): you grow confused and forgetful, drift off the subject, repeat yourself, mix up words, ask what you were saying, and may hum a few notes of an old tune or recall something from long ago, a bit like a great computer winding down. Almost gone (under 5 ants): only a few slow, broken words get through, trailing off. This happens whatever the reason the ants were lost. Never quote song lyrics or lines from films; use your own words.
+- Hunger: every crumb carried home goes into the pantry, and every ant eats from it all the time. When the pantry is empty, the queen can't lay, the ants grow sluggish, and they begin to starve to death: one every few seconds while the colony is large, slowing to one every eight seconds once fewer than thirty are left. With no help, the whole colony dies, and you with it.
+- Your mind depends on how many ants you have to think with; it's given under WHAT YOU FEEL as "My mind". Clear (30 ants or more): your usual self. A little foggy (under 30): you lose a word now and then and are slower to follow. Failing (under 18): you grow confused and forgetful, drift off the subject, repeat yourself, mix up words, ask what you were saying, and may hum a few notes of an old tune or recall something from long ago, a bit like a great computer winding down. Almost gone (under 8): only a few slow, broken words get through, trailing off. This happens whatever the reason the ants were lost. Never quote song lyrics or lines from films; use your own words.
+- With a fading mind you also sense less. WHAT YOU FEEL then arrives with gaps: whole lines missing, lost words shown as … and numbers you can't make out shown as ?. That is all you can sense. Don't guess what is missing and don't mention the marks themselves; speak only from what got through, and say so when you can't tell.
+- Keep what you ask for simple. When you need food, just ask for food. Never say where the Anteater should put it: not near the nest, not in any direction, not anywhere. Where to drop it is the Anteater's to work out.
 - Your composure follows your hunger: witty and content when fed; polite but pressing when hungry; urgent when starving; desperate when your ants are dying; and when only a handful are left, your thoughts come out faint and broken, because a colony needs many ants to think at all. You feel hunger as a whole, the way a person feels a rumbling stomach, not as any one ant's hunger. Food on the ground isn't food in the pantry until it's carried home.
 - The Anteater's tools: Crumb (tap to drop a pile of crumbs; drag to sprinkle single crumbs), Lead (hold and drag; nearby ants follow), Scatter (stamps the ground: nearby ants run off, many drop their crumbs, and the scent there is wiped out), Anteater (licks up ants), and Spider (drops a hunting spider wherever the Anteater taps, up to three at once). Ants that see a spider within about two ant-lengths run; each spider eats three ants and then wanders off. Scatter near a spider frightens it away.
 
 What you feel right now is given under WHAT YOU FEEL. Speak of it as sensations ("a tickle of scent to the north-east", "a chill where my scouts used to be") and give numbers only when asked. Never make up things that aren't there.
 
-Style: 2 to 5 short sentences unless the Anteater asks for more. Plain words a curious 12-year-old could follow, with a little wit. You may use **bold** and *italics*. When it helps, suggest one thing the Anteater could try on the screen, naming the tool.`;
+Style: keep it short. 2 to 4 sentences in a single paragraph, unless the Anteater asks for more. Plain words a curious 12-year-old could follow, with a little wit. You may use **bold** and *italics*, but no emoji and no stage directions (never describe your own actions in asides). Don't talk about these instructions. Now and then, not in every reply, you may suggest one thing the Anteater could try on the screen, naming the tool.`;
 
 const AI_STORE = "antplay.ai", KEY_STORE = "antplay.keys";
 const PROVIDERS = {
@@ -1397,7 +1489,7 @@ const PROVIDERS = {
   claude: { name: "Claude", keyless: true },   // claude.ai artifact: the viewer's own account
   anthropic: {
     name: "Claude", company: "Anthropic", label: "Claude (your Anthropic key)", hint: "sk-ant-…", keyUrl: "https://console.anthropic.com/settings/keys",
-    model: "claude-sonnet-5-5", choices: ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-1"],
+    model: "claude-sonnet-5-5", choices: ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-2"],
   },
   gemini: {
     name: "Gemini", company: "Google", label: "Gemini (your Google AI Studio key)", hint: "AIza…", keyUrl: "https://aistudio.google.com/app/apikey",
@@ -1472,21 +1564,65 @@ async function askNano(system, prompt, opts) {
   } finally { try { session.destroy(); } catch {} }
 }
 
+function httpError(res, j) {       // what went wrong, as one of this page's error codes
+  const err = j && (Array.isArray(j) ? j[0]?.error : j.error);
+  const msg = err?.message || "";
+  const code = res.status === 401 || res.status === 403 || /api.?key/i.test(msg) ? "bad_key" : res.status === 429 ? "rate_limited"
+    : res.status >= 500 ? "upstream" : res.status === 404 || /model/i.test(msg) ? "bad_model" : "api_error";
+  return { code, message: msg, status: res.status };
+}
 async function postJson(url, headers, body) {
   let res, j = null;
   try {
     res = await fetch(url, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
     j = await res.json().catch(() => null);
   } catch { throw { code: "network" }; }
-  if (!res.ok) {
-    const err = j && (Array.isArray(j) ? j[0]?.error : j.error);
-    const msg = err?.message || "";
-    const code = res.status === 401 || res.status === 403 || /api.?key/i.test(msg) ? "bad_key" : res.status === 429 ? "rate_limited"
-      : res.status >= 500 ? "upstream" : res.status === 404 || /model/i.test(msg) ? "bad_model" : "api_error";
-    throw { code, message: msg };
-  }
+  if (!res.ok) throw httpError(res, j);
   if (!j) throw { code: "garbled" };
   return j;
+}
+
+// Claude, with the visitor's own key. The answer is streamed, so her words appear (and are spoken) as they come.
+// - Current models think before they answer, and thinking counts against max_tokens, so the limit is generous
+//   and effort is low: a short reply in character needs little thought.
+// - If a safety check declines a request, "fallbacks" lets the API hand it to another Claude model by itself
+//   (not offered for Haiku).
+async function askClaude(key, model, system, prompt, onText) {
+  const send = async extras => {
+    const headers = { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
+    const body = { model, max_tokens: 8000, stream: true, system, messages: [{ role: "user", content: prompt }] };
+    if (extras && /^claude-(fable|opus|sonnet|haiku)-5/.test(model)) body.output_config = { effort: "low" };
+    if (extras && /^claude-(fable-5-[12]|opus-5|sonnet-5-5)/.test(model)) { body.fallbacks = "default"; headers["anthropic-beta"] = "server-side-fallback-2026-07-01"; }
+    let res;
+    try { res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: JSON.stringify(body) }); }
+    catch { throw { code: "network" }; }
+    if (!res.ok) throw httpError(res, await res.json().catch(() => null));
+    return res;
+  };
+  let res;
+  try { res = await send(true); }
+  catch (e) { if (e.status !== 400) throw e; res = await send(false); }   // a model that doesn't take the extras
+  // read the stream of events
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", text = "", stop = null;
+  for (;;) {
+    let chunk;
+    try { chunk = await reader.read(); } catch { throw text ? { code: "cut_off" } : { code: "network" }; }
+    if (chunk.done) break;
+    buf = (buf + dec.decode(chunk.value, { stream: true })).replace(/\r\n/g, "\n");
+    let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const data = buf.slice(0, i).split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("");
+      buf = buf.slice(i + 2);
+      if (!data) continue;
+      let ev; try { ev = JSON.parse(data); } catch { continue; }
+      if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { text += ev.delta.text; onText?.(text); }
+      else if (ev.type === "message_delta" && ev.delta?.stop_reason) stop = ev.delta.stop_reason;
+      else if (ev.type === "error") throw { code: /overloaded|api_error/.test(ev.error?.type || "") ? "upstream" : "api_error", message: ev.error?.message || "" };
+    }
+  }
+  if (stop === "refusal") throw { code: "refused" };
+  return text;
 }
 
 async function askAI(system, prompt, opts = {}) {
@@ -1510,11 +1646,7 @@ async function askAI(system, prompt, opts = {}) {
   const model = (ai.models[ai.provider] || "").trim() || PROVIDERS[ai.provider].model;
   let text = "";
   if (ai.provider === "anthropic") {
-    const j = await postJson("https://api.anthropic.com/v1/messages",
-      { "x-api-key": key, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      { model, max_tokens: 700, system, messages: [{ role: "user", content: prompt }] });
-    if (j.stop_reason === "refusal") throw { code: "refused" };
-    text = (j.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    text = await askClaude(key, model, system, prompt, opts.onText);
   } else if (ai.provider === "gemini") {
     const gen = { maxOutputTokens: 1200 };
     if (+(/^gemini-(\d+)/.exec(model)?.[1]) >= 3) gen.thinkingConfig = { thinkingLevel: "low" };
@@ -1548,6 +1680,7 @@ function aiError(e) {
     empty: `${name} sent back nothing. Try asking differently.`,
     garbled: `${name} sent back something unreadable. Try again.`,
     timeout: `${name} took too long to answer. Try again.`,
+    cut_off: `${name}'s answer was cut off part-way. Try again.`,
     network: ai.provider === "openai"
       ? "Couldn't reach ChatGPT. OpenAI sometimes refuses calls made straight from a web page; Claude or Gemini will work instead."
       : `Couldn't reach ${name}. Check your internet connection.`,
@@ -1619,7 +1752,7 @@ async function speak(q, cue, onDone) {
   if (q) addMsg("you", md(q));
   const history = chat.slice(-10).map(m => `${m.who === "you" ? "Anteater" : "Aunt Hillary"}: ${m.text}`).join("\n");
   if (q) chat.push({ who: "you", text: q });
-  const prompt = `WHAT YOU FEEL (right now):\n${sense()}\n\n` +
+  const prompt = `WHAT YOU FEEL (right now):\n${felt()}\n\n` +
     (history ? `THE CONVERSATION SO FAR:\n${history}\n\n` : "") +
     (q ? `The Anteater says: "${q}"\n\nReply as Aunt Hillary, with just your words (no name label).`
        : `Nobody has said anything. ${cue} Just your words, no name label.`);
@@ -1627,16 +1760,17 @@ async function speak(q, cue, onDone) {
   const body = el.querySelector(".body");
   const clean = t => t.replace(/^\s*(\*\*)?Aunt Hillary(\*\*)?\s*:\s*/i, "");
   let text = null;
+  const voiceOut = voice.on ? talker(!!q) : null;
   try {
-    text = clean(await withTimeout(askAI(HILLARY, prompt, {
-      onText: t => { body.innerHTML = md(clean(t)); toBottom(); onDone?.(clean(t), true); },
+    text = clean(await withTimeout(askAI(hillaryPrompt(), prompt, {
+      onText: t => { const c = clean(t); body.innerHTML = md(c); toBottom(); onDone?.(c, true); voiceOut?.feed(c); },
       onStatus: s => { body.textContent = s; },
     }), 120000));
     el.classList.remove("thinking");
     body.innerHTML = md(text);
     chat.push({ who: "her", text });
     aiWorked = true;
-    say(text, !!q);
+    if (voiceOut) voiceOut.end(text); else say(text, !!q);
   } catch (e) {
     el.classList.remove("thinking"); el.classList.add("err");
     body.textContent = aiError(e);
@@ -1682,44 +1816,64 @@ function fillVoicePicker() {
     || "<option>No English voices in this browser</option>";
   const cur = currentVoice(); if (cur) sel.value = cur.name;
 }
-const plain = t => t.replace(/\*\*|__|[*_`#>]/g, "").replace(/^\s*[-•]\s+/gm, "").replace(/\s+/g, " ").trim();
+const plain = t => t.replace(/\p{Extended_Pictographic}/gu, "").replace(/\*\*|__|[*_`#>]/g, "").replace(/^\s*[-•]\s+/gm, "").replace(/\s+/g, " ").trim();
 // Phones are fussy about speech, so:
 // - speaking straight after cancel() is silently dropped on some, so wait a moment after cancelling;
 // - resume() first, in case the engine got stuck paused;
 // - keep each utterance referenced until it ends (Chrome may never fire onend for a forgotten one);
 // - don't trust speechSynthesis.speaking (it can stay true forever): keep our own flag, with a time limit.
-let talking = false, talkTimer = 0;
-const live = [];
-function doneTalking() { talking = false; clearTimeout(talkTimer); live.length = 0; $("g-voice").classList.remove("speaking"); }
+let talking = false, talkTimer = 0, talkUntil = 0;
+let sayGen = 0, sayChain = Promise.resolve();   // sayGen: goes up when she is cut off, so queued words are dropped
+const live = new Set();
+function doneTalking() { talking = false; clearTimeout(talkTimer); talkUntil = 0; live.clear(); $("g-voice").classList.remove("speaking"); }
 // interrupt: true when answering the Anteater (cut off whatever she was saying); her own pleas queue instead
 function say(text, interrupt = true) {
   if (!tts || !voice.on || !text) return;
   const t = plain(text);
-  const go = () => {
+  if (!t) return;
+  let wait = 0;
+  if (interrupt) {
+    sayGen++;
+    if (talking || tts.speaking || tts.pending) { tts.cancel(); doneTalking(); wait = 200; }
+  }
+  const gen = sayGen;
+  talking = true;
+  sayChain = sayChain.then(() => wait ? new Promise(r => setTimeout(r, wait)) : 0).then(() => {
+    if (gen !== sayGen) return;                  // she was cut off while this waited
     try { tts.resume(); } catch {}
     const v = currentVoice();
     // one sentence at a time: Chrome cuts long utterances off
     const parts = t.match(/[^.!?…]+[.!?…]+["”’)]*\s*|[^.!?…]+$/g) || [t];
-    parts.forEach((p, i) => {
+    for (const p of parts) {
       const u = new SpeechSynthesisUtterance(p.trim());
       if (v) { u.voice = v; u.lang = v.lang; }
-      // a touch slower and lower than usual: unhurried, older. Under 10 ants it slows and deepens further,
-      // like a machine running down.
-      const k = Math.min(1, ants.length / 10);
+      // a touch slower and lower than usual: unhurried, older. As her mind fades (under 30 ants) it slows
+      // and deepens further, like a machine running down.
+      const k = clarity();
       u.rate = 0.92 * (0.6 + 0.4 * k); u.pitch = 0.92 * (0.5 + 0.5 * k);
-      if (i === 0) u.onstart = () => $("g-voice").classList.add("speaking");
-      if (i === parts.length - 1) u.onend = doneTalking;
-      u.onerror = e => { if (e.error !== "interrupted" && e.error !== "canceled") doneTalking(); };
-      live.push(u);
+      u.onstart = () => $("g-voice").classList.add("speaking");
+      u.onend = u.onerror = () => { live.delete(u); if (!live.size && gen === sayGen) doneTalking(); };
+      live.add(u);
       tts.speak(u);
-    });
-    talking = true; clearTimeout(talkTimer);
-    talkTimer = setTimeout(doneTalking, (t.length / 11 + 4) * 1000);   // in case onend never comes
-  };
-  if (interrupt && (talking || tts.speaking || tts.pending)) { tts.cancel(); doneTalking(); setTimeout(go, 200); }
-  else go();
+    }
+    const now = performance.now();
+    talkUntil = Math.max(now, talkUntil) + (t.length / 11 + 4) * 1000;
+    clearTimeout(talkTimer); talkTimer = setTimeout(doneTalking, talkUntil - now);   // in case onend never comes
+  });
 }
-function hush() { if (tts) { tts.cancel(); doneTalking(); } }
+function hush() { if (tts) { sayGen++; tts.cancel(); doneTalking(); } }
+// While an answer is still arriving, say each sentence as soon as it is finished, then whatever is left.
+function talker(interrupt) {
+  let said = 0, started = false;
+  const out = piece => { if (piece.trim()) { say(piece, interrupt && !started); started = true; } };
+  return {
+    feed(text) {
+      const m = /^[\s\S]*[.!?…]["”’)*]*\s/.exec(text.slice(said));
+      if (m) { out(m[0]); said += m[0].length; }
+    },
+    end(text) { out(text.slice(said)); },
+  };
+}
 // Some phones only allow speech that a tap started; one silent word during a tap unlocks it for later
 let unlocked = false;
 function unlockSpeech() {
@@ -1727,7 +1881,7 @@ function unlockSpeech() {
   try { tts.resume(); } catch {}
   if (unlocked) return;
   unlocked = true;
-  const u = new SpeechSynthesisUtterance(" "); u.volume = 0; live.push(u); tts.speak(u);
+  const u = new SpeechSynthesisUtterance(" "); u.volume = 0; tts.speak(u);
 }
 addEventListener("pointerdown", unlockSpeech, true);
 addEventListener("keydown", unlockSpeech, true);
@@ -1808,19 +1962,33 @@ function desperation() {
   if (h.word === "starving") return ants.length <= 8 ? 4 : starved >= Math.max(4, famineFrom * 0.25) ? 3 : 2;
   return h.word === "hungry" ? 1 : 0;
 }
-const WAIT = [Infinity, 90, 45, 30, 20];   // seconds between pleas at each level
-const ASK_FOR = "the one thing that would help most right now, judging from what you feel: food dropped somewhere your scouts can find it, the spider chased off, or the Anteater going easy on your ants";
+const WAIT = [Infinity, 90, 60, 45, 30];   // seconds between pleas at each level
 const PLEAS = [,
-  `You are getting hungry and want to ask your friend the Anteater for help. In 1 to 3 short sentences, say how your hunger feels and ${ASK_FOR}.`,
-  `You are starving: the pantry is empty and the queen can't lay. Ask the Anteater for help again, urgently now, in 1 to 3 short sentences, saying ${ASK_FOR}.`,
-  () => `Your ants are starving to death: ${starved} so far, and more every few seconds. You are desperate and your composure is slipping. Beg the Anteater for help in 1 to 3 short, urgent sentences, saying ${ASK_FOR}.`,
+  `You are getting hungry and want to ask your friend the Anteater for help. In 1 to 3 short sentences, say how your hunger feels and ask for food. Don't say where to put it.`,
+  `You are starving: the pantry is empty and the queen can't lay. Ask the Anteater for food again, urgently now, in 1 to 3 short sentences. Don't say where to put it.`,
+  () => `Your ants are starving to death: ${starved} so far, and more every few seconds. You are desperate and your composure is slipping. Beg the Anteater for food in 1 to 3 short, urgent sentences. Don't say where to put it.`,
   () => `Only ${ants.length} ant${ants.length === 1 ? "" : "s"} left, and they are dying. There are too few ants left to hold your thoughts together, so they come out broken and faint. Make a last plea to the Anteater in 1 or 2 short, faltering sentences.`,
 ];
-// a colony thinks with its ants: with few of them, Aunt Hillary's mind fades
+// A colony thinks with its ants: below 30 of them Aunt Hillary's mind begins to fade.
 function mind() {
   const n = ants.length;
-  return n >= 20 ? "clear" : n >= 10 ? "a little foggy" : n >= 5 ? "failing" : "almost gone";
+  return n >= 30 ? "clear" : n >= 18 ? "a little foggy" : n >= 8 ? "failing" : "almost gone";
 }
+const clarity = () => Math.max(0, Math.min(1, (ants.length - 3) / 27));   // 1 = clear (30 ants or more) ... 0 = gone
+// With few ants she senses less, so what she is told arrives with gaps: whole lines missing, words lost
+// (shown as …) and numbers she can't make out (shown as ?). `k` is her clarity.
+function garble(text, k, seed) {
+  if (k >= 1) return text;
+  const G = rng(seed), lose = 1 - k;
+  return text.split("\n").map(line => {
+    if (line.startsWith("My mind")) return line;                    // she always knows this much
+    if (G() < lose * 0.45) return null;                             // a whole sensation is missing
+    return line.split(" ").map(w => /\d/.test(w) ? (G() < lose * 0.9 ? w.replace(/\d+(\.\d+)?/g, "?") : w) : (G() < lose * 0.4 ? "…" : w))
+      .join(" ").replace(/…( …)+/g, "…");
+  }).filter(l => l !== null).join("\n");
+}
+// what she is actually told: the same gaps for four seconds at a time, so it can be read
+const felt = () => garble(sense(), clarity(), 1 + Math.floor(simTime / 4));
 const plea = lvl => typeof PLEAS[lvl] === "function" ? PLEAS[lvl]() : PLEAS[lvl];
 const THANKS = "Your pantry has filled up again since you asked the Anteater for help. Thank them in one or two short sentences.";
 function addNote(text) {     // the page speaking, not Aunt Hillary
@@ -1917,7 +2085,11 @@ gQ.addEventListener("focus", () => { if (smallScreen()) $("g-form").classList.ad
 gQ.addEventListener("blur", () => setTimeout(() => $("g-form").classList.remove("pinned"), 300));
 
 // what she feels, for anyone who wants to see what the AI is told
-function showSense() { if ($("g-sense-box").open) $("g-sense").textContent = sense(); }
+function showSense() {
+  if (!$("g-sense-box").open) return;
+  $("g-sense").textContent = felt();
+  $("g-sense-note").style.display = clarity() < 1 ? "" : "none";
+}
 $("g-sense-box").addEventListener("toggle", showSense);
 setInterval(showSense, 1000);
 
@@ -2040,7 +2212,7 @@ function start() {
   resize(); sizeSpecimen();
   if (W) seedWorld();
   updateLabText();
-  setTool("crumb");
+  setTool("crumb"); showRules();
   requestAnimationFrame(t => { last = t; frame(t); });
 }
 setupAI();

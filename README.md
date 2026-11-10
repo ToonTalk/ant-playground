@@ -17,6 +17,13 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 - **Anteater**: tap or drag to lick up ants. The pointer becomes the anteater's snout, and the tongue flicks out to where you tap.
 - **Spider**: tap to drop a spider there, up to three at once. Ants that see it run away. Each spider eats three ants and then leaves.
 - **Time** speeds the whole simulation up or slows it down together. **Walking speed** changes only how fast the ants and spiders walk; everything else keeps its pace, so faster walkers bring home more food than the colony eats, and the game gets easier.
+- **The ants' rules**: a panel under the colony lets you change how the ants behave, with questions to guess at and then try.
+  - Whether carrying ants leave scent at all.
+  - How fast the scent fades.
+  - Whether it spreads sideways as it fades.
+  - How far away an ant can smell food.
+
+  Aunt Hillary is told about any change and can say how it feels.
 - **Sprite lab**: turn any walker to any heading, step through its frames, and compare frames with the ghost of the previous one.
 
 ## Hunger
@@ -24,9 +31,12 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 - **The pantry:** every crumb carried home goes into the pantry, and every ant eats from it all the time.
 - **The queen:** she lays new ants, which crawl out of the nest, only when the pantry has food to spare, and faster the fuller it is. Each egg costs food, so the colony grows when food is plentiful and shrinks when ants starve or are eaten. A very small colony's queen lays whenever she can, slowly, so it can recover.
 - **The Ants slider:** it follows the population as it changes. Move it to call for more ants (they hatch from the nest) or to wish some away (they die where they stand and fade).
-- **An empty pantry:** the queen stops laying, the ants slow down, and they start to starve. One dies every twelve seconds at first, then faster.
-- **Her pleas:** as things get worse, Aunt Hillary asks the Anteater for help more often and more desperately. When only a handful of ants are left, her thoughts come out broken, because a colony needs many ants to think at all.
-- **A fading mind:** a colony thinks with its ants. Below about 10 ants, Aunt Hillary grows confused and forgetful whatever the cause, and with voice on, her voice slows and deepens like a machine running down. Below 5, only a few broken words get through.
+- **An empty pantry:** the queen stops laying, the ants slow down, and they start to starve. One dies every few seconds while the colony is big, slowing to one every eight seconds from 30 ants down. From an empty pantry, a colony of 60 lasts about six minutes. No food appears by itself: if you want to watch a colony starve, you can.
+- **Her pleas:** as things get worse, Aunt Hillary asks the Anteater for food more often and more desperately. She only asks for food; she never says where to put it.
+- **A fading mind:** a colony thinks with its ants, so below 30 ants her mind begins to fade, whatever the cause.
+  - Under 30 she is a little foggy, under 18 confused and forgetful, and under 8 only a few broken words get through.
+  - The AI isn't just told to act confused: what she senses really does arrive with gaps. Whole lines go missing, lost words show as … and lost numbers as ?. "What she can feel right now" shows exactly what got through.
+  - With voice on, her voice slows and deepens as her mind fades, like a machine running down.
 - **If nobody helps:** the colony dies. You can found a new one, but that Aunt Hillary is a new pattern who remembers nothing of the last.
 
 ## Voice
@@ -39,6 +49,8 @@ Aunt Hillary is a made-up character from the dialogue "Prelude... Ant Fugue" in 
 
 - **Gemini Nano**, built into desktop Chrome. It is free and runs on your computer, and it is the default when Chrome offers it.
 - **Your own key** for Claude, Gemini or ChatGPT, set in **AI settings**. Keys stay in your browser and are stored only if you tick "Remember".
+  - With a Claude key her words appear as they arrive, and with voice on she starts speaking after the first sentence. Gemini and ChatGPT answers still arrive all at once.
+  - Claude models offered: Haiku 5.5, Sonnet 5.5 (the default), Opus 5.5 and Fable 5.2. You can type any other model name.
 - In the claude.ai artifact edition, she uses Claude through the viewer's own claude.ai account.
 
 ## How it's made
@@ -58,6 +70,18 @@ python tools/build.py             # -> index.html (this site) and ant-playground
 `src/index.src.html` is the page source. The build inlines the atlases, so `index.html` is one self-contained file.
 
 `old/index-16dir.src.html` is the first version, built for an earlier 16-direction ant sheet.
+
+## Tests
+
+```
+node tests/run.mjs        # 15 checks on the built page in headless Chrome; no AI is called
+node tests/hillary.mjs    # talks to Aunt Hillary with a real Claude key (costs a little)
+```
+
+Both need Node 22 or newer and Chrome.
+
+- `tests/run.mjs` steps the colony by hand, so minutes of colony time take a moment. It checks that a fed colony grows, an unfed one starves slowly enough to watch her fade, the rules do what they say, resizing keeps the scent, touch gestures work, and Claude's streamed answers are read correctly.
+- `tests/hillary.mjs` asks her twelve things across the colony's states (fed, hungry, starving, fading, fed again) and writes what she said to `tests/hillary-transcript.md`. The key is read from the environment variable `ANT-PLAYGROUND-ANTHROPIC-KEY` and never enters the browser: the page's request is handed to the script, which adds the key.
 
 ## License
 
